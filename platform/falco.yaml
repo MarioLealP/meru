@@ -1,0 +1,75 @@
+# Falco: runtime detection for every container on the box - k3s pods and the host's compose stacks. Writes JSON
+# events to /var/log/falco/events.json on the host; the host's Wazuh agent tails it and maps priorities to alert
+# levels (clockmost-infra: ops/wazuh-agent, projects/wazuh). Wave 1: after Zot.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: falco
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://falcosecurity.github.io/charts
+    chart: falco
+    targetRevision: 9.2.1 # Falco 0.45.1
+    helm:
+      valuesObject:
+        image:
+          tag: 0.45.1@sha256:69e957f91b3a6beb5c82e2afae33ec3e4479dab2d4421475d288d0cd113cedf6
+        podLabels:
+          app.kubernetes.io/part-of: meru
+          meru.clockmost.com/owner: platform
+        resources:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { memory: 768Mi }
+        driver:
+          kind: modern_ebpf # in-kernel BPF, no module build; privileged so it can also reach the runtime sockets
+        collectors:
+          containerEngine:
+            engines:
+              docker: { enabled: true, sockets: [/var/run/docker.sock] } # the compose stacks
+              cri: { enabled: true, sockets: [/run/k3s/containerd/containerd.sock] } # k3s pods
+              containerd: { enabled: false }
+              podman: { enabled: false }
+              lxc: { enabled: false }
+              libvirt_lxc: { enabled: false }
+              bpm: { enabled: false }
+        falcoctl:
+          # The rules and the container plugin ship inside the pinned image. falcoctl would fetch them from ghcr.io at
+          # runtime, past Zot and unpinned - Renovate bumping the chart is how the rules update.
+          artifact:
+            install: { enabled: false }
+            follow: { enabled: false }
+        mounts:
+          volumes:
+            - name: events
+              hostPath: { path: /var/log/falco, type: DirectoryOrCreate }
+          volumeMounts:
+            - name: events
+              mountPath: /var/log/falco
+        falco:
+          priority: notice # informational/debug rules stay out
+          json_output: true
+          file_output:
+            enabled: true
+            keep_alive: false # reopened per event, so logrotate can move the file away (ops/falco)
+            filename: /var/log/falco/events.json
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: falco
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    # Falco runs privileged, so its namespace can't be "restricted" - a Kyverno exception allows it
+    # (clockmost-infra: k8s/kyverno-policies/exceptions/falco.yaml).
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

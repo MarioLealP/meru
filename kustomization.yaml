@@ -7,6 +7,8 @@ resources:
   - projects/thoth.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
+  # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
+  - platform/falco.yaml
 patches:
   # Every app fence gets the same list of object kinds, kept in one place.
   - path: projects/app-kinds.yaml
