@@ -1,0 +1,15 @@
+# The object kinds an app may deploy into its own two namespaces. Applied to every meru-* fence by
+# kustomization.yaml. No Secrets (they come from OpenBao), no cluster-wide kinds beyond the app's two Namespaces.
+- op: add
+  path: /spec/namespaceResourceWhitelist
+  value:
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: PersistentVolumeClaim }
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: apps, kind: Deployment }
+    - { group: batch, kind: Job }
+    - { group: rbac.authorization.k8s.io, kind: Role }
+    - { group: rbac.authorization.k8s.io, kind: RoleBinding }
+    - { group: postgresql.cnpg.io, kind: Cluster }
+    - { group: postgresql.cnpg.io, kind: Database }

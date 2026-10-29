@@ -1,0 +1,22 @@
+# The platform's fence: the parts this repo lists (Kyverno, CNPG, Zot, ...). They install cluster-wide objects (CRDs,
+# webhooks, cluster roles), so it is wide open; only this repo, which the platform owner merges, puts anything in it.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Meru's platform parts, listed in Meru/meru.
+  sourceRepos:
+    - ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    - https://git.clockmost.com/Meru/*
+    - https://cloudnative-pg.github.io/charts
+    - https://falcosecurity.github.io/charts
+    - https://go.temporal.io/helm-charts
+    - https://kyverno.github.io/kyverno
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
