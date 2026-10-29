@@ -30,7 +30,7 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 - `platform/<part>.yaml` - the platform's parts, one Argo CD Application each, all in the `platform` fence. An
   explicit list, never discovered: each part installs cluster-wide objects, so adding one is a reviewed change
   here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence. Moving in one at a time
-  from clockmost-infra; so far: Falco.
+  from clockmost-infra; so far: CNPG, Falco.
 
 ## Adding an app
 
