@@ -1,0 +1,22 @@
+# Zot: registry + pull-through mirror (D8, D13). Wave 0: after the rules exist.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: zot
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    targetRevision: main
+    path: k8s/zot
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: zot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

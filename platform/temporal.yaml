@@ -1,0 +1,103 @@
+# Temporal: the workflow engine behind Shikigami (workspace runbook clockmost-kubernetes.md D10). Temporal's own
+# chart in its normal layout (frontend, history, matching, worker + the web UI), one replica each, on the CNPG
+# database from temporal-db.yaml (wave 2). Admin tools off; the schema job (a Helm hook = an Argo PreSync hook)
+# creates/updates the tables on every sync.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  project: platform
+  source:
+    repoURL: https://go.temporal.io/helm-charts
+    chart: temporal
+    targetRevision: 1.7.0
+    helm:
+      valuesObject:
+        # The chart sets app.kubernetes.io/part-of: temporal itself (the namespace carries part-of: meru).
+        additionalLabels:
+          meru.clockmost.com/owner: platform
+        server:
+          image:
+            repository: docker.io/temporalio/server
+            tag: 1.32.1@sha256:acecbab5b0b8ae9cf4012b508866ca97feda3709577bf157b537239f40029049
+          securityContext: &pod
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile: { type: RuntimeDefault }
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 512Mi }
+          config:
+            logLevel: info
+            persistence:
+              # Can never change after the first install. 512 is sized for big clusters; 8 is plenty here.
+              numHistoryShards: 8
+              datastores:
+                default:
+                  sql: &sql
+                    pluginName: postgres12_pgx
+                    driverName: postgres12_pgx
+                    databaseName: temporal
+                    connectAddr: temporal-db-rw.temporal.svc.cluster.local:5432
+                    connectProtocol: tcp
+                    user: temporal
+                    existingSecret: temporal-db-app # written by CNPG
+                    secretKey: password
+                    maxConns: 10
+                    maxIdleConns: 5
+                    maxConnLifetime: 1h
+                    createDatabase: false # CNPG made both databases
+                    manageSchema: true
+                visibility:
+                  sql:
+                    <<: *sql
+                    databaseName: temporal_visibility
+            namespaces:
+              create: true
+              namespace:
+                - name: meru # Shikigami's workflows
+                  retention: 30d
+          frontend: { containerSecurityContext: &container { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } } }
+          history: { containerSecurityContext: *container }
+          matching: { containerSecurityContext: *container }
+          worker:
+            containerSecurityContext: *container
+            # The chart gives the worker no probes (it has no rpc port); its membership port is up when it is.
+            livenessProbe: { initialDelaySeconds: 150, tcpSocket: { port: membership } }
+            readinessProbe: { tcpSocket: { port: membership } }
+        admintools:
+          enabled: false
+          image:
+            repository: docker.io/temporalio/admin-tools
+            tag: 1.32.1@sha256:9ef0dc5b063bf4ffd5c1512de72e0e73e225bd2c7006a18ce69bd592a8862a83 # also runs the schema + namespace jobs
+        schema:
+          securityContext: *pod
+          containerSecurityContext: *container
+          resources:
+            requests: { cpu: 25m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        web:
+          image:
+            repository: docker.io/temporalio/ui
+            tag: 2.57.0@sha256:d944f959d0923c35cd991a17a0edbe087770eff843724b181933e0cfdd563ab2
+          securityContext: *pod
+          containerSecurityContext: *container
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: temporal
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

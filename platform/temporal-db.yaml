@@ -1,0 +1,32 @@
+# Temporal's database, its own app one wave before Temporal: the chart's schema job runs first in every Temporal
+# sync, so the database has to exist already. It also creates the namespace (Pod Security restricted).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal-db
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    targetRevision: main
+    path: k8s/temporal-db
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: temporal
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

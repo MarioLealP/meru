@@ -1,0 +1,24 @@
+# Meru's compliance rules (D27). Wave -1: after Kyverno, before any workload.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  source:
+    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    targetRevision: main
+    path: k8s/kyverno-policies
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry: # Kyverno's CRDs may not exist yet on the first pass
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
