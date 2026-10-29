@@ -1,0 +1,59 @@
+# Finds Meru apps' databases: a repo with both deploy/meru.yaml and deploy/database/ gets a second Application,
+# app-<repo>-db, from that folder - same fence meru-<repo>, same namespace <repo> (CNPG writes the login Secrets next
+# to the Cluster, where the app's pods can mount them). Its own Application because the data must outlive every app
+# deploy: it never prunes, and the Cluster itself should carry Prune=false,Delete=false - so a bad commit can change
+# the database but never delete it. No ordering with the app: its migration retries until Postgres is up.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: meru-databases
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - matrix:
+        generators:
+          - scmProvider:
+              cloneProtocol: https
+              gitea:
+                owner: Meru
+                api: https://git.clockmost.com/
+              filters:
+                - pathsExist: [deploy/meru.yaml, deploy/database]
+              requeueAfterSeconds: 180
+          - git:
+              repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+              revision: "{{ .branch }}"
+              files:
+                - path: deploy/meru.yaml
+  template:
+    metadata:
+      name: "app-{{ .repository }}-db"
+      namespace: argocd
+    spec:
+      project: "meru-{{ .repository }}"
+      source:
+        repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+        targetRevision: "{{ .branch }}"
+        path: deploy/database
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .repository }}"
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            pod-security.kubernetes.io/enforce: restricted
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/app: "{{ .repository }}"
+            meru.clockmost.com/owner: "{{ .owner }}"
+        retry:
+          limit: 10
+          backoff: { duration: 30s, factor: 2, maxDuration: 10m }
