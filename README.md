@@ -18,8 +18,14 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 - `appsets/meru-apps.yaml` - finds the apps: every public repo in the `Meru` org with a `deploy/meru.yaml` gets one
   Application, `app-<repo>`, in its fence, deploying into the namespace named after the repo. `deploy/meru.yaml`
   holds `owner`, `chart` (the [nuwa-app](https://git.clockmost.com/Meru/nuwa) release the app was tested with),
-  `build` (true: also its build namespace and Sindri runner) and `manifests` (true: also apply `deploy/manifests/`).
-  Argo never deletes what it generates: removing an app is a deliberate step.
+  `build` (true: also its build namespace and Sindri runner) and, optionally, `buildLabels` (extra runner labels and
+  the image their jobs run in - e.g. `sindri-check` for tests; never `sindri` itself, the only label whose jobs get
+  the build keys). Argo never deletes what it generates: removing an app is a deliberate step.
+- `appsets/meru-databases.yaml` - an app's database: a repo that also has `deploy/database/` gets a second
+  Application, `app-<repo>-db`, in the same fence and namespace. Separate because the data must outlive every app
+  deploy: it never prunes, and the database object itself should carry
+  `argocd.argoproj.io/sync-options: Prune=false,Delete=false`. No ordering between the two - the app's migration
+  retries until the database answers.
 
 Coming here next: the platform's list of parts.
 

@@ -1,7 +1,9 @@
 # Finds Meru apps: every public repo in the Meru org with a deploy/meru.yaml gets one Application, app-<repo>, in its
 # own fence meru-<repo> (projects/). A repo with the file but no fence deploys nothing. The namespace is always the
-# repo's name. What the file holds (all required): owner, chart (the nuwa-app release it was tested with), build
-# (true: also its build namespace + Sindri runner), manifests (true: also apply deploy/manifests/).
+# repo's name. What the file holds: owner, chart (the nuwa-app release it was tested with), build (true: also its
+# build namespace + Sindri runner) - all required - and optional buildLabels (extra runner labels -> the image their
+# jobs run in, e.g. sindri-check for tests; never sindri itself: only its jobs get the build keys). The app's
+# database, if any, is meru-databases.yaml's.
 # The app- prefix keeps a repo from taking over a platform Application of the same name (the controller adopts any
 # unowned Application it generates the name of). Argo is set to never delete what this generates (create-update).
 apiVersion: argoproj.io/v1alpha1
@@ -68,11 +70,6 @@ spec:
         - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
           targetRevision: {{ .branch | quote }}
           ref: app
-      {{- if .manifests }}
-        - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
-          targetRevision: {{ .branch | quote }}
-          path: deploy/manifests
-      {{- end }}
       {{- if .build }}
         - repoURL: https://git.clockmost.com/Meru/sindri.git
           targetRevision: sindri-build-0.2.0
@@ -82,4 +79,11 @@ spec:
             valuesObject:
               app: {{ .repository | quote }}
               owner: {{ .owner | quote }}
+            {{- if hasKey . "buildLabels" }}
+            {{- if hasKey .buildLabels "sindri" }}{{ fail "deploy/meru.yaml: buildLabels may not redefine sindri" }}{{ end }}
+              labels:
+              {{- range $label, $image := .buildLabels }}
+                {{ $label | quote }}: {{ $image | quote }}
+              {{- end }}
+            {{- end }}
       {{- end }}
