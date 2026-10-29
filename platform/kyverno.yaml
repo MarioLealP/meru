@@ -1,0 +1,54 @@
+# Kyverno: admission policy engine (workspace runbook clockmost-kubernetes.md D27). Wave -2: before its policies.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  project: platform
+  source:
+    repoURL: https://kyverno.github.io/kyverno
+    chart: kyverno
+    targetRevision: 3.9.2 # Kyverno v1.19.2
+    helm:
+      valuesObject:
+        kyverno-api:
+          # The subchart renders its CRDs with `labels: {}` and `annotations: {}`, which the API server drops -
+          # Argo then shows them OutOfSync forever. One entry in each makes the maps non-empty.
+          labels:
+            app.kubernetes.io/part-of: kyverno
+          annotations:
+            meru.clockmost.com/owner: platform
+        config:
+          webhooks:
+            # The platform exemptions, in one place: pieces installed before the rules existed.
+            # Kyverno's own namespace is excluded by the chart (excludeKyvernoNamespace).
+            namespaceSelector:
+              matchExpressions:
+                - key: kubernetes.io/metadata.name
+                  operator: NotIn
+                  values: [kube-system, kube-public, kube-node-lease, argocd, local-path-storage]
+        features:
+          policyExceptions:
+            enabled: true
+            namespace: kyverno # per-workload exceptions live here, in git (k8s/kyverno-policies/exceptions)
+        admissionController:
+          replicas: 1
+        backgroundController:
+          enabled: false # no generate / mutate-existing rules
+        cleanupController:
+          enabled: false # no cleanup policies
+        reportsController:
+          enabled: true # policy reports: what passes/fails, also for things already running
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # Kyverno's CRDs are too big for client-side apply

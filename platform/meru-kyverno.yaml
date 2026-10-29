@@ -1,0 +1,26 @@
+# Meru's trust rules from their own repo (D60): Meru/kyverno - the signing-key list, the one meru-signed rule, the
+# per-app build exceptions. Changes there only go in through Mario's merge (branch protection), and this file is
+# protected in the merge gate. Wave -1 with the other rules: before any app.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: meru-kyverno
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/kyverno.git # public; the LAN via cluster DNS
+    targetRevision: main
+    path: .
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
