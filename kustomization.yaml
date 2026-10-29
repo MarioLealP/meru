@@ -5,6 +5,7 @@ resources:
   - projects/platform.yaml
   - projects/echo.yaml
   - projects/thoth.yaml
+  - appsets/meru-apps.yaml
 patches:
   # Every app fence gets the same list of object kinds, kept in one place.
   - path: projects/app-kinds.yaml

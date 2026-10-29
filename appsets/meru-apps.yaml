@@ -1,0 +1,85 @@
+# Finds Meru apps: every public repo in the Meru org with a deploy/meru.yaml gets one Application, app-<repo>, in its
+# own fence meru-<repo> (projects/). A repo with the file but no fence deploys nothing. The namespace is always the
+# repo's name. What the file holds (all required): owner, chart (the nuwa-app release it was tested with), build
+# (true: also its build namespace + Sindri runner), manifests (true: also apply deploy/manifests/).
+# The app- prefix keeps a repo from taking over a platform Application of the same name (the controller adopts any
+# unowned Application it generates the name of). Argo is set to never delete what this generates (create-update).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: meru-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - matrix:
+        generators:
+          - scmProvider:
+              cloneProtocol: https
+              gitea:
+                owner: Meru
+                api: https://git.clockmost.com/
+              filters:
+                - pathsExist: [deploy/meru.yaml]
+              requeueAfterSeconds: 180
+          - git:
+              repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+              revision: "{{ .branch }}"
+              files:
+                - path: deploy/meru.yaml
+  template:
+    metadata:
+      name: "app-{{ .repository }}"
+      namespace: argocd
+    spec:
+      project: "meru-{{ .repository }}"
+      sources: []
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .repository }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            pod-security.kubernetes.io/enforce: restricted
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/app: "{{ .repository }}"
+            meru.clockmost.com/owner: "{{ .owner }}"
+        retry:
+          limit: 10
+          backoff: { duration: 30s, factor: 2, maxDuration: 10m }
+  templatePatch: |
+    spec:
+      sources:
+        - repoURL: https://git.clockmost.com/Meru/nuwa.git
+          targetRevision: {{ .chart | quote }}
+          path: charts/nuwa-app
+          helm:
+            releaseName: {{ .repository | quote }}
+            valueFiles:
+              - $app/deploy/values.yaml
+        - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
+          targetRevision: {{ .branch | quote }}
+          ref: app
+      {{- if .manifests }}
+        - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
+          targetRevision: {{ .branch | quote }}
+          path: deploy/manifests
+      {{- end }}
+      {{- if .build }}
+        - repoURL: https://git.clockmost.com/Meru/sindri.git
+          targetRevision: sindri-build-0.2.0
+          path: charts/sindri-build
+          helm:
+            releaseName: {{ printf "%s-build" .repository | quote }}
+            valuesObject:
+              app: {{ .repository | quote }}
+              owner: {{ .owner | quote }}
+      {{- end }}

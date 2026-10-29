@@ -15,8 +15,13 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 - `projects/app-kinds.yaml` - the object kinds every app fence allows, in one place (no Secrets: they come from
   OpenBao).
 
-Coming here next: the platform's list of parts, and the ApplicationSet that finds app repos - any public repo in the
-`Meru` org with a `deploy/meru.yaml` - and gives each one an Application in its fence.
+- `appsets/meru-apps.yaml` - finds the apps: every public repo in the `Meru` org with a `deploy/meru.yaml` gets one
+  Application, `app-<repo>`, in its fence, deploying into the namespace named after the repo. `deploy/meru.yaml`
+  holds `owner`, `chart` (the [nuwa-app](https://git.clockmost.com/Meru/nuwa) release the app was tested with),
+  `build` (true: also its build namespace and Sindri runner) and `manifests` (true: also apply `deploy/manifests/`).
+  Argo never deletes what it generates: removing an app is a deliberate step.
+
+Coming here next: the platform's list of parts.
 
 ## Adding an app
 
