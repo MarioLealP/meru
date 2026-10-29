@@ -35,12 +35,14 @@ def problems(project: dict) -> list[str]:
 
 
 def main() -> None:
-    fences = [
-        doc
-        for doc in yaml.safe_load_all(Path(sys.argv[1]).read_text())
-        if doc and doc["kind"] == "AppProject" and doc["metadata"]["name"].startswith("meru-")
-    ]
+    docs = [doc for doc in yaml.safe_load_all(Path(sys.argv[1]).read_text()) if doc]
+    fences = [doc for doc in docs if doc["kind"] == "AppProject" and doc["metadata"]["name"].startswith("meru-")]
     failed = False
+    # Every Application listed here is a platform part: it belongs in the platform fence, never in default.
+    for app in (doc for doc in docs if doc["kind"] == "Application"):
+        if app["spec"].get("project") != "platform":
+            print(f"Application {app['metadata']['name']}: project {app['spec'].get('project')!r}, not 'platform'")
+            failed = True
     for fence in fences:
         for problem in problems(fence):
             print(f"{fence['metadata']['name']}: {problem}")
