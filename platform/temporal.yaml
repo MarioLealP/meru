@@ -2,10 +2,14 @@
 # chart in its normal layout (frontend, history, matching, worker + the web UI), one replica each, on the CNPG
 # database from temporal-db.yaml (wave 2). Admin tools off; the schema job (a Helm hook = an Argo PreSync hook)
 # creates/updates the tables on every sync.
-# Front door (D70, step 1 of 2): mutual TLS. Every certificate comes from OpenBao's pki_meru through cert-manager
-# (D71) - the frontend only accepts clients holding one; the services talk to each other over TLS too (internode).
-# Step 2, Authentik tokens on top, decides what each client may do. Renewals: the server re-reads its files
-# (refreshInterval); the UI is rolled by Meru/kyverno's restart-on-secret-change (D72).
+# Front door (D70): mutual TLS + Authentik tokens. Every certificate comes from OpenBao's pki_meru through
+# cert-manager (D71) - the frontend only accepts clients holding one; the services talk to each other over TLS too
+# (internode). On top, every call needs a token from Authentik's `temporal-oidc` provider (client_id temporal):
+# its `temporal_permissions` claim (`<namespace>:<role>`, from temporal-* groups) decides what the caller may do.
+# Temporal's own parts (worker service, namespace job) use the internal-frontend instead: internode mTLS, no token.
+# The web UI logs Mario in with that provider and passes his token on (D73, a WP-62 exception until 2027-04-30);
+# its client secret comes from OpenBao through ESO. Renewals: the server re-reads its files (refreshInterval);
+# the UI is rolled by Meru/kyverno's restart-on-secret-change (D72), for certificates and the secret alike.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -64,6 +68,46 @@ spec:
                     mountPath: /v1/auth/kubernetes
                     role: meru-certs
                     serviceAccountRef: { name: certs, audiences: [openbao] }
+          # ESO logs in to OpenBao as `eso` (shared role meru-eso): reads apps/meru/temporal/eso/* only.
+          - |
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: eso
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            automountServiceAccountToken: false
+          - |
+            apiVersion: external-secrets.io/v1
+            kind: SecretStore
+            metadata:
+              name: openbao
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            spec:
+              provider:
+                vault:
+                  server: https://openbao.clockmost.internal:8204
+                  path: apps
+                  version: v2
+                  # The clockmost root CA (public), as in the Issuer above.
+                  caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ1RENDQVQrZ0F3SUJBZ0lVZGhFWDJENlFNdkFTQnRTRzBVbXZnNi84MmJVd0NnWUlLb1pJemowRUF3TXcKSERFYU1CZ0dBMVVFQXd3UlkyeHZZMnR0YjNOMElISnZiM1FnUTBFd0hoY05Nall4TURBMk1UVTFNakkwV2hjTgpNell4TURBek1UVTFNakkwV2pBY01Sb3dHQVlEVlFRRERCRmpiRzlqYTIxdmMzUWdjbTl2ZENCRFFUQjJNQkFHCkJ5cUdTTTQ5QWdFR0JTdUJCQUFpQTJJQUJOMnNSNEdubE1IN3ArcWczZ2NOUWRzckl5T0N6REpQZnBrRDRIL3EKd2VxWEdsWHNpaWJ6b2lhWDM4NTV4R3hOQkYxbkg5dlZGamhOelB0dmZEamhSZ1ZzTXNtVGw0cG9LSDBQMU5TcgphTFdkOUwwdmw0aHdSWStpNVVEYlBXZW01YU5DTUVBd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBT0JnTlZIUThCCkFmOEVCQU1DQVFZd0hRWURWUjBPQkJZRUZNVXdMRVE1RTdpMTQrUnNBUXU2eVNLNHpGeFVNQW9HQ0NxR1NNNDkKQkFNREEyY0FNR1FDTUNmamZKczd2RThFTyt2Q21UdzJsNFFGWXV2MVRIMVlVakZ3ZWRQcHZqa1R4ZTFqZ1lWVgpFRW15WHFQU29xQjNtZ0l3TWlQMC8xRzZYRlJ4TVQraEhqMTYrdU9qdjZsM25xUHVVV29tc09RYWtQRjVpNTFVCkF3cXZ6WmpmemxyNFdVOW8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                  auth:
+                    kubernetes:
+                      mountPath: kubernetes
+                      role: meru-eso
+                      serviceAccountRef: { name: eso, audiences: [openbao] }
+          # The UI's OIDC client secret (written by meru-oidc-secret.sh from Authentik's generated one).
+          - |
+            apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: temporal-ui-oidc
+              annotations: { argocd.argoproj.io/sync-wave: "-1" }
+            spec:
+              refreshInterval: 5m
+              secretStoreRef: { name: openbao, kind: SecretStore }
+              target: { name: temporal-ui-oidc, creationPolicy: Owner }
+              dataFrom:
+                - extract: { key: meru/temporal/eso/temporal-ui-oidc }
           # The services among themselves (history, matching, worker, frontend); also their client cert to the frontend.
           - |
             apiVersion: cert-manager.io/v1
@@ -141,6 +185,15 @@ spec:
               requireClientAuth: true # mTLS: no certificate from pki_meru, no connection
           config:
             logLevel: info
+            # Every call to the frontend needs an Authentik token (except health checks + GetSystemInfo).
+            authorization:
+              jwtKeyProvider:
+                keySourceURIs: [https://auth.clockmost.com/application/o/temporal-oidc/jwks/]
+                refreshInterval: 1h
+              permissionsClaimName: temporal_permissions
+              audience: temporal # only tokens minted for Temporal - not Thoth's or anyone else's
+              authorizer: default
+              claimMapper: default
             tls:
               refreshInterval: 1h # re-read the certificate files, so renewals need no restart
             persistence:
@@ -179,6 +232,10 @@ spec:
             # The chart gives the worker no probes (it has no rpc port); its membership port is up when it is.
             livenessProbe: { initialDelaySeconds: 150, tcpSocket: { port: membership } }
             readinessProbe: { tcpSocket: { port: membership } }
+          # Temporal's own parts call this one instead of the frontend: internode mTLS, no authorizer, so no token.
+          internal-frontend:
+            enabled: true
+            containerSecurityContext: *container
         admintools:
           enabled: false
           image:
@@ -196,6 +253,19 @@ spec:
             secretName: temporal-web-tls
             serverName: temporal-frontend.temporal.svc
             enableHostVerification: true
+          # Mario logs in through Authentik (D73); the forward-auth gate in Caddy stays in front. The access token
+          # (10 min) is renewed from the refresh token in an HttpOnly cookie, for up to 12 h.
+          additionalEnv:
+            - { name: TEMPORAL_AUTH_ENABLED, value: "true" }
+            - { name: TEMPORAL_AUTH_REDIRECT_TO_PROVIDER, value: "true" }
+            - { name: TEMPORAL_AUTH_PROVIDER_URL, value: https://auth.clockmost.com/application/o/temporal-oidc/ }
+            - { name: TEMPORAL_AUTH_CLIENT_ID, value: temporal }
+            - name: TEMPORAL_AUTH_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: temporal-ui-oidc, key: clientSecret } }
+            - { name: TEMPORAL_AUTH_CALLBACK_URL, value: https://temporal.clockmost.com/auth/sso/callback }
+            - { name: TEMPORAL_AUTH_SCOPES, value: "openid,profile,email,temporal,offline_access" }
+            - { name: TEMPORAL_AUTH_REFRESH_TOKEN_DURATION, value: 12h }
+            - { name: TEMPORAL_MAX_SESSION_DURATION, value: 12h }
           image:
             repository: docker.io/temporalio/ui
             tag: 2.57.0@sha256:d944f959d0923c35cd991a17a0edbe087770eff843724b181933e0cfdd563ab2
