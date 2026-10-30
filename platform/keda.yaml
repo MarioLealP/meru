@@ -1,0 +1,72 @@
+# KEDA: scales Shikigami's workers on its own queue backlog (D75) - the generic metrics-api trigger polls
+# Shikigami's `GET /backlog`, so KEDA holds no Temporal certificate or token. It drives a standard HPA; it doesn't
+# scale anything by itself. 2.21.0: fixes GHSA-637c-6jxx-4rwm (critical - a namespace admin could make KEDA send
+# its token to an outside URL). Its reach is cut down from the chart's defaults:
+# - Secrets: its own namespace only (no cluster-wide Secret list)
+# - scale targets: Deployments and StatefulSets only - the chart's default `*/*` get (any object, Secrets
+#   included, by name) is for scaling custom resources, which we don't do
+# Kept, and accepted: Jobs create/delete cluster-wide (for ScaledJobs - Kyverno and each namespace's restricted
+# pod security still apply), and updating its own webhook + metrics APIService registration.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keda
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://kedacore.github.io/charts
+    chart: keda
+    targetRevision: 2.21.0 # latest (2026-09-23)
+    helm:
+      releaseName: keda
+      valuesObject:
+        image:
+          keda:
+            tag: 2.21.0@sha256:81fe6547ce8d1cc29273f887b76507e9b853e5bc1f875ec23fe60061a38ed809
+          metricsApiServer:
+            tag: 2.21.0@sha256:255375037fe592732eeb554743aae360c2da88cf0b9b1258d0a987ef885f0881
+          webhooks:
+            tag: 2.21.0@sha256:e1969628cca6123e32eea13c47c75817091af2657fa68d9d0d58a8620d1b75b1
+          pullPolicy: IfNotPresent
+        permissions:
+          metricServer: { restrict: { secret: true } }
+          operator: { restrict: { secret: true } }
+        rbac:
+          enabledCustomScaledRefKinds: false
+        # The chart sets app.kubernetes.io/part-of: keda-operator itself. The namespace is not part-of: meru on
+        # purpose - that label opens OpenBao's shared Meru logins (D71).
+        podLabels:
+          keda: &labels
+            meru.clockmost.com/owner: platform
+          metricsAdapter: *labels
+          webhooks: *labels
+        # No CPU limits (they throttle on an idle machine); the chart sets 1 core, null removes it.
+        resources:
+          operator:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits: { cpu: null, memory: 256Mi }
+          metricServer:
+            requests: { cpu: 10m, memory: 48Mi }
+            limits: { cpu: null, memory: 256Mi }
+          webhooks:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { cpu: null, memory: 128Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # the CRDs are too big for client-side apply
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

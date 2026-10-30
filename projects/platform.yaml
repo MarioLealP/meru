@@ -14,6 +14,7 @@ spec:
     - https://cloudnative-pg.github.io/charts
     - https://falcosecurity.github.io/charts
     - https://go.temporal.io/helm-charts
+    - https://kedacore.github.io/charts
     - https://kyverno.github.io/kyverno
   destinations:
     - server: https://kubernetes.default.svc
