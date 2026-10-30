@@ -2,6 +2,10 @@
 # chart in its normal layout (frontend, history, matching, worker + the web UI), one replica each, on the CNPG
 # database from temporal-db.yaml (wave 2). Admin tools off; the schema job (a Helm hook = an Argo PreSync hook)
 # creates/updates the tables on every sync.
+# Front door (D70, step 1 of 2): mutual TLS. Every certificate comes from OpenBao's pki_meru through cert-manager
+# (D71) - the frontend only accepts clients holding one; the services talk to each other over TLS too (internode).
+# Step 2, Authentik tokens on top, decides what each client may do. Renewals: the server re-reads its files
+# (refreshInterval); the UI is rolled by Meru/kyverno's restart-on-secret-change (D72).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -17,6 +21,93 @@ spec:
     targetRevision: 1.7.0
     helm:
       valuesObject:
+        extraObjects:
+          # cert-manager logs in to OpenBao as `certs` (shared role meru-certs): names under temporal.svc only.
+          - |
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: certs
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            automountServiceAccountToken: false
+          - |
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: cert-manager-certs-token
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            rules:
+              - { apiGroups: [""], resources: [serviceaccounts/token], resourceNames: [certs], verbs: [create] }
+          - |
+            apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: cert-manager-certs-token
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: cert-manager-certs-token }
+            subjects:
+              - { kind: ServiceAccount, name: cert-manager, namespace: cert-manager }
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Issuer
+            metadata:
+              name: openbao
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            spec:
+              vault:
+                server: https://openbao.clockmost.internal:8204
+                path: pki_meru/sign/meru-ns
+                # The clockmost root CA (public): OpenBao's listener certificate chains to it.
+                caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ1RENDQVQrZ0F3SUJBZ0lVZGhFWDJENlFNdkFTQnRTRzBVbXZnNi84MmJVd0NnWUlLb1pJemowRUF3TXcKSERFYU1CZ0dBMVVFQXd3UlkyeHZZMnR0YjNOMElISnZiM1FnUTBFd0hoY05Nall4TURBMk1UVTFNakkwV2hjTgpNell4TURBek1UVTFNakkwV2pBY01Sb3dHQVlEVlFRRERCRmpiRzlqYTIxdmMzUWdjbTl2ZENCRFFUQjJNQkFHCkJ5cUdTTTQ5QWdFR0JTdUJCQUFpQTJJQUJOMnNSNEdubE1IN3ArcWczZ2NOUWRzckl5T0N6REpQZnBrRDRIL3EKd2VxWEdsWHNpaWJ6b2lhWDM4NTV4R3hOQkYxbkg5dlZGamhOelB0dmZEamhSZ1ZzTXNtVGw0cG9LSDBQMU5TcgphTFdkOUwwdmw0aHdSWStpNVVEYlBXZW01YU5DTUVBd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBT0JnTlZIUThCCkFmOEVCQU1DQVFZd0hRWURWUjBPQkJZRUZNVXdMRVE1RTdpMTQrUnNBUXU2eVNLNHpGeFVNQW9HQ0NxR1NNNDkKQkFNREEyY0FNR1FDTUNmamZKczd2RThFTyt2Q21UdzJsNFFGWXV2MVRIMVlVakZ3ZWRQcHZqa1R4ZTFqZ1lWVgpFRW15WHFQU29xQjNtZ0l3TWlQMC8xRzZYRlJ4TVQraEhqMTYrdU9qdjZsM25xUHVVV29tc09RYWtQRjVpNTFVCkF3cXZ6WmpmemxyNFdVOW8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                auth:
+                  kubernetes:
+                    mountPath: /v1/auth/kubernetes
+                    role: meru-certs
+                    serviceAccountRef: { name: certs, audiences: [openbao] }
+          # The services among themselves (history, matching, worker, frontend); also their client cert to the frontend.
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: temporal-internode
+              annotations: { argocd.argoproj.io/sync-wave: "-1" }
+            spec:
+              secretName: temporal-internode-tls
+              dnsNames: [internode.temporal.svc]
+              duration: 24h
+              renewBefore: 8h
+              privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+              usages: [server auth, client auth, digital signature]
+              issuerRef: { name: openbao, kind: Issuer }
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: temporal-frontend
+              annotations: { argocd.argoproj.io/sync-wave: "-1" }
+            spec:
+              secretName: temporal-frontend-tls
+              dnsNames: [temporal-frontend.temporal.svc, temporal-frontend.temporal.svc.cluster.local]
+              duration: 24h
+              renewBefore: 8h
+              privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+              usages: [server auth, client auth, digital signature]
+              issuerRef: { name: openbao, kind: Issuer }
+          # The web UI's client certificate to the frontend.
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: temporal-web
+              annotations: { argocd.argoproj.io/sync-wave: "-1" }
+            spec:
+              secretName: temporal-web-tls
+              dnsNames: [temporal-web.temporal.svc]
+              duration: 24h
+              renewBefore: 8h
+              privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
+              usages: [client auth, digital signature]
+              issuerRef: { name: openbao, kind: Issuer }
         # The chart sets app.kubernetes.io/part-of: temporal itself (the namespace carries part-of: meru).
         additionalLabels:
           meru.clockmost.com/owner: platform
@@ -33,8 +124,25 @@ spec:
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 512Mi }
+          # The server re-reads its certificate files (refreshInterval below), so a renewal needs no restart:
+          # Meru/kyverno's restart-on-secret-change skips these (D72). The UI can't, so it isn't annotated.
+          deploymentAnnotations:
+            meru.clockmost.com/reloads-secrets: "true"
+          tls:
+            internode:
+              enabled: true
+              secretName: temporal-internode-tls
+              serverName: internode.temporal.svc
+              requireClientAuth: true
+            frontend:
+              enabled: true
+              secretName: temporal-frontend-tls
+              serverName: temporal-frontend.temporal.svc
+              requireClientAuth: true # mTLS: no certificate from pki_meru, no connection
           config:
             logLevel: info
+            tls:
+              refreshInterval: 1h # re-read the certificate files, so renewals need no restart
             persistence:
               # Can never change after the first install. 512 is sized for big clusters; 8 is plenty here.
               numHistoryShards: 8
@@ -83,6 +191,11 @@ spec:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 256Mi }
         web:
+          tls:
+            enabled: true
+            secretName: temporal-web-tls
+            serverName: temporal-frontend.temporal.svc
+            enableHostVerification: true
           image:
             repository: docker.io/temporalio/ui
             tag: 2.57.0@sha256:d944f959d0923c35cd991a17a0edbe087770eff843724b181933e0cfdd563ab2
