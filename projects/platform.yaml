@@ -9,6 +9,7 @@ spec:
   description: Meru's platform parts, listed in Meru/meru.
   sourceRepos:
     - https://git.clockmost.com/Meru/*
+    - https://charts.external-secrets.io
     - https://cloudnative-pg.github.io/charts
     - https://falcosecurity.github.io/charts
     - https://go.temporal.io/helm-charts

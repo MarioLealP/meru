@@ -1,0 +1,76 @@
+# External Secrets Operator: turns an ExternalSecret placeholder in an app's repo into a real Secret, read from
+# OpenBao with that namespace's own login (D66). Shikigami writes the values to OpenBao, never to the cluster.
+# Only the namespaced kinds run: no ClusterSecretStore (one store every namespace could read through), no
+# ClusterExternalSecret, no PushSecret (cluster -> OpenBao) and no ClusterGenerator. Wave 1: after the rules.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: eso
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: 2.14.0 # ESO 2.14.0 (fixes every published advisory, incl. GHSA-v6x5-m838-gqph)
+    helm:
+      releaseName: external-secrets
+      valuesObject:
+        global:
+          podLabels:
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/owner: platform
+        crds:
+          createClusterExternalSecret: false
+          createClusterSecretStore: false
+          createClusterGenerator: false
+          createClusterPushSecret: false
+          createPushSecret: false
+        processClusterExternalSecret: false
+        processClusterStore: false
+        processClusterGenerator: false
+        processClusterPushSecret: false
+        processPushSecret: false
+        image:
+          tag: v2.14.0@sha256:10608eb53e636e744903d5f3657a4d9c44e28d9d9c181b73e07bc7dd2e6884dc
+        resources:
+          requests: { cpu: 20m, memory: 64Mi }
+          limits: { memory: 256Mi }
+        livenessProbe:
+          enabled: true
+        readinessProbe:
+          enabled: true
+        webhook:
+          image:
+            tag: v2.14.0@sha256:10608eb53e636e744903d5f3657a4d9c44e28d9d9c181b73e07bc7dd2e6884dc
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          livenessProbe:
+            enabled: true
+        certController:
+          image:
+            tag: v2.14.0@sha256:10608eb53e636e744903d5f3657a4d9c44e28d9d9c181b73e07bc7dd2e6884dc
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          livenessProbe:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # ESO's CRDs are too big for client-side apply
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
