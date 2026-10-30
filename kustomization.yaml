@@ -5,6 +5,7 @@ resources:
   - projects/platform.yaml
   - projects/echo.yaml
   - projects/thoth.yaml
+  - projects/shikigami.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
