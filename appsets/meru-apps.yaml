@@ -72,7 +72,7 @@ spec:
           ref: app
       {{- if .build }}
         - repoURL: https://git.clockmost.com/Meru/sindri.git
-          targetRevision: sindri-build-0.3.0
+          targetRevision: sindri-build-0.4.0
           path: charts/sindri-build
           helm:
             releaseName: {{ printf "%s-build" .repository | quote }}
