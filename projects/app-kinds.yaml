@@ -1,6 +1,7 @@
 # The object kinds an app may deploy into its own two namespaces. Applied to every meru-* fence by
 # kustomization.yaml. No Secrets: an ExternalSecret names what it needs and ESO fills it from OpenBao (D66), through
-# the namespace's own SecretStore. No cluster-wide kinds beyond the app's two Namespaces.
+# the namespace's own SecretStore. A Certificate comes from the namespace's own Issuer, which OpenBao limits to
+# <ns>.svc names (D71). No cluster-wide kinds beyond the app's two Namespaces.
 - op: add
   path: /spec/namespaceResourceWhitelist
   value:
@@ -16,3 +17,5 @@
     - { group: postgresql.cnpg.io, kind: Database }
     - { group: external-secrets.io, kind: SecretStore }
     - { group: external-secrets.io, kind: ExternalSecret }
+    - { group: cert-manager.io, kind: Issuer }
+    - { group: cert-manager.io, kind: Certificate }
