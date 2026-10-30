@@ -12,6 +12,7 @@ resources:
   - platform/cnpg.yaml
   - platform/eso.yaml
   - platform/falco.yaml
+  - platform/keda.yaml
   - platform/kyverno.yaml
   - platform/kyverno-policies.yaml
   - platform/meru-kyverno.yaml
