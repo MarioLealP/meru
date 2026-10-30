@@ -30,9 +30,9 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 - `platform/<part>.yaml` - the platform's parts, one Argo CD Application each, all in the `platform` fence. An
   explicit list, never discovered: each part installs cluster-wide objects, so adding one is a reviewed change
   here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence: Kyverno and its rules
-  (clockmost-infra's and [Meru/kyverno](https://git.clockmost.com/Meru/kyverno)), CNPG, Zot, Falco, Temporal and its
-  database. Zot, Temporal's database and the cluster-wide Kyverno rules still read their manifests from
-  clockmost-infra's `k8s/` until they get repos of their own.
+  ([Meru/kyverno](https://git.clockmost.com/Meru/kyverno)), CNPG, [Zot](https://git.clockmost.com/Meru/zot), Falco,
+  [Temporal](https://git.clockmost.com/Meru/temporal) and its database. Upstream charts come straight from their
+  publishers; everything of ours from a `Meru/` repo.
 
 ## Adding an app
 

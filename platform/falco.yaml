@@ -66,7 +66,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
     # Falco runs privileged, so its namespace can't be "restricted" - a Kyverno exception allows it
-    # (clockmost-infra: k8s/kyverno-policies/exceptions/falco.yaml).
+    # (Meru/kyverno: cluster/exceptions/falco.yaml).
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: privileged
