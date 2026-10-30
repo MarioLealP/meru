@@ -37,7 +37,20 @@ spec:
         admissionController:
           replicas: 1
         backgroundController:
-          enabled: false # no generate / mutate-existing rules
+          enabled: true # D72: runs Meru/kyverno's restart-on-secret-change (mutate-existing)
+          rbac:
+            # Only what that rule needs: roll Deployments. The chart's default extras (create/delete roles,
+            # rolebindings, network policies, configmaps...) are for generate rules, which we don't have.
+            coreClusterRole:
+              extraResources: []
+            clusterRole:
+              extraResources:
+                - apiGroups: [apps]
+                  resources: [deployments]
+                  verbs: [get, list, watch, update, patch]
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { memory: 128Mi }
         cleanupController:
           enabled: false # no cleanup policies
         reportsController:
