@@ -7,6 +7,8 @@
 # (internode). On top, every call needs a token from Authentik's `temporal-oidc` provider (client_id temporal):
 # its `temporal_permissions` claim (`<namespace>:<role>`, from temporal-* groups) decides what the caller may do.
 # Temporal's own parts (worker service, namespace job) use the internal-frontend instead: internode mTLS, no token.
+# So internode trusts its own CA, not pki_meru (D74): any Meru namespace can get a pki_meru cert for its own name,
+# and with it would reach the internal-frontend - admin, no token - and history/matching directly.
 # The web UI logs Mario in with that provider and passes his token on (D73, a WP-62 exception until 2027-04-30);
 # its client secret comes from OpenBao through ESO. Renewals: the server re-reads its files (refreshInterval);
 # the UI is rolled by Meru/kyverno's restart-on-secret-change (D72), for certificates and the secret alike.
@@ -108,7 +110,40 @@ spec:
               target: { name: temporal-ui-oidc, creationPolicy: Owner }
               dataFrom:
                 - extract: { key: meru/temporal/eso/temporal-ui-oidc }
-          # The services among themselves (history, matching, worker, frontend); also their client cert to the frontend.
+          # Internode's own CA (D74): its key lives only in this namespace (temporal-internode-ca, encrypted at rest),
+          # cert-manager renews it. 10 years; when it does renew, every server must restart within the hour (they
+          # re-read files hourly, and old and new would not trust each other meanwhile).
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Issuer
+            metadata:
+              name: selfsigned
+              annotations: { argocd.argoproj.io/sync-wave: "-4" }
+            spec:
+              selfSigned: {}
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: temporal-internode-ca
+              annotations: { argocd.argoproj.io/sync-wave: "-3" }
+            spec:
+              isCA: true
+              commonName: temporal internode CA
+              secretName: temporal-internode-ca
+              duration: 87600h
+              privateKey: { algorithm: ECDSA, size: 384 }
+              issuerRef: { name: selfsigned, kind: Issuer }
+          - |
+            apiVersion: cert-manager.io/v1
+            kind: Issuer
+            metadata:
+              name: temporal-internode
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            spec:
+              ca:
+                secretName: temporal-internode-ca
+          # The services among themselves (history, matching, worker, frontend, internal-frontend).
           - |
             apiVersion: cert-manager.io/v1
             kind: Certificate
@@ -122,7 +157,7 @@ spec:
               renewBefore: 8h
               privateKey: { algorithm: ECDSA, size: 256, rotationPolicy: Always }
               usages: [server auth, client auth, digital signature]
-              issuerRef: { name: openbao, kind: Issuer }
+              issuerRef: { name: temporal-internode, kind: Issuer }
           - |
             apiVersion: cert-manager.io/v1
             kind: Certificate
