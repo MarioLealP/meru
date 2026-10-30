@@ -1,4 +1,4 @@
-# Temporal's database, its own app one wave before Temporal: the chart's schema job runs first in every Temporal
+# Temporal's database (Meru/temporal database/), its own app one wave before Temporal: the chart's schema job runs first in every Temporal
 # sync, so the database has to exist already. It also creates the namespace (Pod Security restricted).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -10,9 +10,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    repoURL: https://git.clockmost.com/Meru/temporal.git # public; the LAN via cluster DNS
     targetRevision: main
-    path: k8s/temporal-db
+    path: database
   destination:
     server: https://kubernetes.default.svc
     namespace: temporal

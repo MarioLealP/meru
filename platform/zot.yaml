@@ -1,4 +1,4 @@
-# Zot: registry + pull-through mirror (D8, D13). Wave 0: after the rules exist.
+# Zot: registry + pull-through mirror, from Meru/zot. Wave 0: after the rules exist.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -7,9 +7,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    repoURL: https://git.clockmost.com/Meru/zot.git # public; the LAN via cluster DNS
     targetRevision: main
-    path: k8s/zot
+    path: .
   destination:
     server: https://kubernetes.default.svc
     namespace: zot

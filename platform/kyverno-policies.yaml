@@ -1,4 +1,5 @@
-# Meru's compliance rules (D27). Wave -1: after Kyverno, before any workload.
+# Meru's compliance rules for every workload namespace (Meru/kyverno cluster/ - not that repo's root, which
+# meru-kyverno applies). Wave -1: after Kyverno, before any workload.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,9 +10,9 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
+    repoURL: https://git.clockmost.com/Meru/kyverno.git # public; the LAN via cluster DNS
     targetRevision: main
-    path: k8s/kyverno-policies
+    path: cluster
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno

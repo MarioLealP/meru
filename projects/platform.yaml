@@ -8,7 +8,6 @@ metadata:
 spec:
   description: Meru's platform parts, listed in Meru/meru.
   sourceRepos:
-    - ssh://git@192.168.10.110:2222/MarioGLealP/clockmost-infra.git
     - https://git.clockmost.com/Meru/*
     - https://cloudnative-pg.github.io/charts
     - https://falcosecurity.github.io/charts
