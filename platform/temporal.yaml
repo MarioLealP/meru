@@ -207,6 +207,40 @@ spec:
           # Meru/kyverno's restart-on-secret-change skips these (D72). The UI can't, so it isn't annotated.
           deploymentAnnotations:
             meru.clockmost.com/reloads-secrets: "true"
+          # The frontend fetches Authentik's signing keys once at start and then only every refreshInterval - a
+          # failed first fetch isn't retried sooner, and an unknown key ID doesn't trigger one. After the 2026-10-31
+          # boot it started before Caddy listened and refused every token for an hour. So the frontend waits until
+          # the keys answer (backing off to a minute). The chart gives every server service these init containers;
+          # history, matching and the worker never call Authentik, so for them it's a no-op.
+          additionalInitContainers:
+            - name: wait-for-authentik
+              image: docker.io/curlimages/curl:8.23.0@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
+              env:
+                - name: COMPONENT
+                  valueFrom: { fieldRef: { fieldPath: "metadata.labels['app.kubernetes.io/component']" } }
+                - { name: JWKS, value: https://auth.clockmost.com/application/o/temporal-oidc/jwks/ }
+              command:
+                - sh
+                - -c
+                - |
+                  [ "$COMPONENT" = frontend ] || exit 0
+                  delay=2
+                  until curl -fsS --max-time 10 "$JWKS" | grep -q '"kid"'; do
+                    echo "Authentik's keys not reachable yet, retrying in ${delay}s"
+                    sleep "$delay"
+                    delay=$((delay * 2 > 60 ? 60 : delay * 2))
+                  done
+                  echo "Authentik's keys reachable"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 100 # curl_user in the image
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: [ALL] }
+                seccompProfile: { type: RuntimeDefault }
+              resources:
+                requests: { cpu: 5m, memory: 8Mi }
+                limits: { memory: 32Mi }
           tls:
             internode:
               enabled: true
@@ -224,9 +258,8 @@ spec:
             authorization:
               jwtKeyProvider:
                 keySourceURIs: [https://auth.clockmost.com/application/o/temporal-oidc/jwks/]
-                # Also the retry after a failed fetch: at boot the frontend can start before Caddy listens, and with
-                # 1h every token was refused for an hour (2026-10-31). One small GET a minute to Authentik.
-                refreshInterval: 1m
+                # Only for key rotations: the one fetch at start is made safe by wait-for-authentik above.
+                refreshInterval: 1h
               permissionsClaimName: temporal_permissions
               audience: temporal # only tokens minted for Temporal - not Thoth's or anyone else's
               authorizer: default
