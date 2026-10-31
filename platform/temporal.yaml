@@ -224,7 +224,9 @@ spec:
             authorization:
               jwtKeyProvider:
                 keySourceURIs: [https://auth.clockmost.com/application/o/temporal-oidc/jwks/]
-                refreshInterval: 1h
+                # Also the retry after a failed fetch: at boot the frontend can start before Caddy listens, and with
+                # 1h every token was refused for an hour (2026-10-31). One small GET a minute to Authentik.
+                refreshInterval: 1m
               permissionsClaimName: temporal_permissions
               audience: temporal # only tokens minted for Temporal - not Thoth's or anyone else's
               authorizer: default
