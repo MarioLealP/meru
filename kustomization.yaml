@@ -7,6 +7,7 @@ resources:
   - projects/thoth.yaml
   - projects/shikigami.yaml
   - projects/xolotl.yaml
+  - projects/homunculus.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights in this namespace - each one exact, with its reason.
