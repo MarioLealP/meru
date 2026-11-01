@@ -1,0 +1,21 @@
+# Atlas's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-atlas
+  namespace: argocd
+spec:
+  description: "Atlas - The clockmost atlas - the map of what runs where, and Meru's front door (Janus)"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/atlas.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: atlas
+    - server: https://kubernetes.default.svc
+      namespace: atlas-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: atlas }
+    - { group: "", kind: Namespace, name: atlas-build }
