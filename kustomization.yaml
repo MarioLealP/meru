@@ -9,7 +9,6 @@ resources:
   - projects/xolotl.yaml
   - projects/atlas.yaml
   - projects/janus.yaml
-  - projects/kitsune.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights in this namespace - each one exact, with its reason.
