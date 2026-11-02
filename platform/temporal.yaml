@@ -294,6 +294,8 @@ spec:
               namespace:
                 - name: meru # Shikigami's workflows
                   retention: 30d
+                - name: heimdall # Heimdall's scans, every 5 min - their own room, short history (D103)
+                  retention: 3d
           frontend: { containerSecurityContext: &container { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } } }
           history: { containerSecurityContext: *container }
           matching: { containerSecurityContext: *container }
