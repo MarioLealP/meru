@@ -12,8 +12,9 @@ resources:
   - projects/tanuki.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
-  # Workload identities' rights in this namespace - each one exact, with its reason.
+  # Workload identities' rights - each one exact, with its reason.
   - rbac/shikigami-reads-apps.yaml
+  - rbac/heimdall-reads-cluster.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
   - platform/cert-manager.yaml
   - platform/cnpg.yaml
