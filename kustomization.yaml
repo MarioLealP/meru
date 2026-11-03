@@ -10,6 +10,7 @@ resources:
   - projects/atlas.yaml
   - projects/janus.yaml
   - projects/heimdall.yaml
+  - projects/charon.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights - each one exact, with its reason.
