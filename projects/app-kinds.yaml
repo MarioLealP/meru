@@ -11,6 +11,7 @@
     - { group: "", kind: ServiceAccount }
     - { group: apps, kind: Deployment }
     - { group: batch, kind: Job }
+    - { group: batch, kind: CronJob } # a scheduled app (nuwa-app job, D107): Charon's daily pass
     - { group: rbac.authorization.k8s.io, kind: Role }
     - { group: rbac.authorization.k8s.io, kind: RoleBinding }
     - { group: postgresql.cnpg.io, kind: Cluster }
