@@ -1,0 +1,60 @@
+# Charon may delete a retired app's namespaces (D107, step 1): it lists namespaces, and once one's
+# meru.clockmost.com/removed-at is past the app's retention, deletes it. Two keys: Shikigami writes the mark
+# (shikigami-marks-retired.yaml), Charon only reads it and checks the days - it can't edit a namespace, so it can't
+# mark one itself. delete on namespaces is cluster-wide in RBAC terms; the admission policy below narrows it: only a
+# Meru app namespace that carries the mark. CEL has no clock, so the 30 days stay in Charon's code.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: charon-deletes-retired
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get, list, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: charon-deletes-retired
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: charon-deletes-retired
+subjects:
+  - kind: ServiceAccount
+    name: charon
+    namespace: charon
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: charon-deletes-retired
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [DELETE]
+        resources: [namespaces]
+  matchConditions:
+    - name: charon-only
+      expression: request.userInfo.username == 'system:serviceaccount:charon:charon'
+  variables:
+    - name: labels
+      expression: "has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}"
+    - name: annotations
+      expression: "has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}"
+  validations:
+    - expression: "'app.kubernetes.io/part-of' in variables.labels && variables.labels['app.kubernetes.io/part-of'] == 'meru'"
+      message: Charon deletes only Meru app namespaces (app.kubernetes.io/part-of=meru).
+    - expression: "'meru.clockmost.com/removed-at' in variables.annotations && variables.annotations['meru.clockmost.com/removed-at'] != ''"
+      message: Charon deletes only namespaces Shikigami marked retired (meru.clockmost.com/removed-at).
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: charon-deletes-retired
+spec:
+  policyName: charon-deletes-retired
+  validationActions: [Deny]
