@@ -18,6 +18,7 @@ resources:
   - rbac/heimdall-reads-cluster.yaml
   - rbac/shikigami-marks-retired.yaml
   - rbac/charon-deletes-retired.yaml
+  - rbac/charon-reads-apps.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
   - platform/cert-manager.yaml
   - platform/cnpg.yaml
