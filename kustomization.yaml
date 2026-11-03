@@ -9,7 +9,6 @@ resources:
   - projects/xolotl.yaml
   - projects/atlas.yaml
   - projects/janus.yaml
-  - projects/tanuki.yaml
   - projects/heimdall.yaml
   - projects/homunculus.yaml
   - projects/kitsune.yaml
