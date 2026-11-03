@@ -1,0 +1,25 @@
+# Charon reads a retired app's Argo Application before deleting its namespace (D109): one that still exists means the
+# app is back or not finished stopping, and the namespace stays. Read only, in argocd alone.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: charon-reads-apps
+  namespace: argocd
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: charon-reads-apps
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: charon-reads-apps
+subjects:
+  - kind: ServiceAccount
+    name: charon
+    namespace: charon
