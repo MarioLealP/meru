@@ -1,0 +1,71 @@
+# Shikigami may mark a retired app's namespaces (Charon step 1): its retire pass copies the request's removedAt
+# (stamped by Xolotl) onto `<app>` and `<app>-build` as the annotation meru.clockmost.com/removed-at, and a restore
+# (D106) takes it off again. Charon may delete only namespaces that carry it - so a namespace needs both keys,
+# Shikigami's mark and Charon's 30-day check, before it goes. get + patch on namespaces is broad in RBAC terms; the
+# admission policy below narrows it: Shikigami's namespace updates may change that one annotation and nothing else,
+# and only on Meru app namespaces (app.kubernetes.io/part-of=meru).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: shikigami-marks-retired
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: shikigami-marks-retired
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: shikigami-marks-retired
+subjects:
+  - kind: ServiceAccount
+    name: shikigami
+    namespace: shikigami
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: shikigami-marks-retired
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [UPDATE]
+        resources: [namespaces]
+  matchConditions:
+    - name: shikigami-only
+      expression: request.userInfo.username == 'system:serviceaccount:shikigami:shikigami'
+  variables:
+    - name: mark
+      expression: "'meru.clockmost.com/removed-at'"
+    - name: oldAnnotations
+      expression: "has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}"
+    - name: newAnnotations
+      expression: "has(object.metadata.annotations) ? object.metadata.annotations : {}"
+    - name: oldLabels
+      expression: "has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}"
+    - name: newLabels
+      expression: "has(object.metadata.labels) ? object.metadata.labels : {}"
+  validations:
+    - expression: "'app.kubernetes.io/part-of' in variables.oldLabels && variables.oldLabels['app.kubernetes.io/part-of'] == 'meru'"
+      message: Shikigami marks only Meru app namespaces (app.kubernetes.io/part-of=meru).
+    - expression: variables.newLabels == variables.oldLabels
+      message: Shikigami may not change a namespace's labels.
+    - expression: >-
+        variables.oldAnnotations.all(k, k == variables.mark || (k in variables.newAnnotations && variables.newAnnotations[k] == variables.oldAnnotations[k]))
+        && variables.newAnnotations.all(k, k == variables.mark || k in variables.oldAnnotations)
+      message: Shikigami may change only the meru.clockmost.com/removed-at annotation.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: shikigami-marks-retired
+spec:
+  policyName: shikigami-marks-retired
+  validationActions: [Deny]
