@@ -14,6 +14,7 @@ resources:
   - projects/kitsune.yaml
   - projects/homunculus.yaml
   - projects/tanuki.yaml
+  - projects/golem.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights - each one exact, with its reason.
