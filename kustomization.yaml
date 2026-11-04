@@ -19,6 +19,7 @@ resources:
   - rbac/shikigami-marks-retired.yaml
   - rbac/charon-deletes-retired.yaml
   - rbac/charon-reads-apps.yaml
+  - rbac/charon-releases-volumes.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
   - platform/cert-manager.yaml
   - platform/cnpg.yaml

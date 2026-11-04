@@ -1,0 +1,67 @@
+# Charon may let a retired app's volumes go (D110): it lists PersistentVolumes and sets a Released one to Delete, and the
+# provisioner removes the folder and the PV. Charon never touches a disk. patch on PVs is cluster-wide in RBAC terms; the
+# admission policy below narrows it: Retain to Delete on a Released PV, and nothing else on it changes. A volume in use
+# is Bound, so it can't be flipped. CEL has no clock, so the retention stays in Charon's code.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: charon-releases-volumes
+rules:
+  - apiGroups: [""]
+    resources: [persistentvolumes]
+    verbs: [get, list, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: charon-releases-volumes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: charon-releases-volumes
+subjects:
+  - kind: ServiceAccount
+    name: charon
+    namespace: charon
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: charon-releases-volumes
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [UPDATE]
+        resources: [persistentvolumes]
+  matchConditions:
+    - name: charon-only
+      expression: request.userInfo.username == 'system:serviceaccount:charon:charon'
+  variables:
+    - name: labels
+      expression: "has(object.metadata.labels) ? object.metadata.labels : {}"
+    - name: oldLabels
+      expression: "has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}"
+    - name: annotations
+      expression: "has(object.metadata.annotations) ? object.metadata.annotations : {}"
+    - name: oldAnnotations
+      expression: "has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}"
+  validations:
+    - expression: "oldObject.status.phase == 'Released'"
+      message: Charon changes only Released volumes.
+    - expression: "oldObject.spec.persistentVolumeReclaimPolicy == 'Retain' && object.spec.persistentVolumeReclaimPolicy == 'Delete'"
+      message: Charon only sets a volume from Retain to Delete.
+    - expression: "object.spec.claimRef == oldObject.spec.claimRef && object.spec.capacity == oldObject.spec.capacity && object.spec.accessModes == oldObject.spec.accessModes && object.spec.storageClassName == oldObject.spec.storageClassName"
+      message: Charon changes nothing else on a volume.
+    - expression: "variables.labels == variables.oldLabels && variables.annotations == variables.oldAnnotations"
+      message: Charon changes nothing else on a volume.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: charon-releases-volumes
+spec:
+  policyName: charon-releases-volumes
+  validationActions: [Deny]
