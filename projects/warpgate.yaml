@@ -1,0 +1,21 @@
+# Warpgate's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-warpgate
+  namespace: argocd
+spec:
+  description: "Warpgate - Bastion for root access - recorded SSH, Authentik login, approved one-use tickets"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/warpgate.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: warpgate
+    - server: https://kubernetes.default.svc
+      namespace: warpgate-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: warpgate }
+    - { group: "", kind: Namespace, name: warpgate-build }
