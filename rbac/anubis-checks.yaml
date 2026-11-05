@@ -1,0 +1,51 @@
+# Anubis's direct checks (D118): before a verdict on something scanners stopped seeing, it looks again by another path
+# than Heimdall's lists. A workload: `get` that exact object by name - no list, so it can only confirm what Thoth names.
+# An app: its Argo Application app-<name> (exists, Healthy). Read only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: anubis-checks-workloads
+rules:
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [get]
+  - apiGroups: [batch]
+    resources: [cronjobs]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: anubis-checks-workloads
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: anubis-checks-workloads
+subjects:
+  - kind: ServiceAccount
+    name: anubis
+    namespace: anubis
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: anubis-checks-apps
+  namespace: argocd
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: anubis-checks-apps
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: anubis-checks-apps
+subjects:
+  - kind: ServiceAccount
+    name: anubis
+    namespace: anubis
