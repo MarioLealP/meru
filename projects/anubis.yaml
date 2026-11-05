@@ -1,0 +1,21 @@
+# Anubis's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-anubis
+  namespace: argocd
+spec:
+  description: "Anubis - Meru's verdicts - reports what is stuck in Thoth, later the only one that retires"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/anubis.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: anubis
+    - server: https://kubernetes.default.svc
+      namespace: anubis-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: anubis }
+    - { group: "", kind: Namespace, name: anubis-build }
