@@ -13,6 +13,7 @@ resources:
   - projects/charon.yaml
   - projects/warpgate.yaml
   - projects/anubis.yaml
+  - projects/glitchtip.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights - each one exact, with its reason.
