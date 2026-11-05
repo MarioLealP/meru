@@ -1,0 +1,56 @@
+# Charon's sweep report (D124): each pass writes how many change entries (env-*) in OpenBao nothing points at into the
+# ConfigMap charon-sweep in its own namespace, and Zabbix reads that one object - the Anubis pattern (D115). Charon may
+# create ConfigMaps only in its namespace (create can't be narrowed to a name) and change only that one; Zabbix may
+# read only that one.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: charon-writes-sweep-report
+  namespace: charon
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [charon-sweep]
+    verbs: [get, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: charon-writes-sweep-report
+  namespace: charon
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: charon-writes-sweep-report
+subjects:
+  - kind: ServiceAccount
+    name: charon
+    namespace: charon
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zabbix-reads-charon-sweep
+  namespace: charon
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [charon-sweep]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zabbix-reads-charon-sweep
+  namespace: charon
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zabbix-reads-charon-sweep
+subjects:
+  - kind: ServiceAccount
+    name: zabbix
+    namespace: zabbix-reader
