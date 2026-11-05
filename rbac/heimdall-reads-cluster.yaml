@@ -1,7 +1,8 @@
 # Heimdall may list what runs in the cluster (D100/D101): every namespace (Meru apps are the labelled ones) and every
-# Deployment, StatefulSet and DaemonSet, which it reports to Thoth as k8s-scan@clockmost every 5 minutes. List only:
-# no get, no watch, no writes, and nothing that holds values - no Secrets, ConfigMaps or pods. Cluster-wide on
-# purpose: a scan is a snapshot of the whole cluster, platform included.
+# Deployment, StatefulSet, DaemonSet and CronJob (D117: a CronJob app - Charon, Anubis - has no Deployment), which it
+# reports to Thoth as k8s-scan@clockmost every 5 minutes. List only: no get, no watch, no writes, and nothing that
+# holds values - no Secrets, ConfigMaps or pods. Cluster-wide on purpose: a scan is a snapshot of the whole cluster,
+# platform included.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -12,6 +13,9 @@ rules:
     verbs: [list]
   - apiGroups: [apps]
     resources: [deployments, statefulsets, daemonsets]
+    verbs: [list]
+  - apiGroups: [batch]
+    resources: [cronjobs]
     verbs: [list]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
