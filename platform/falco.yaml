@@ -65,6 +65,10 @@ spec:
                   i=0; until curl -sf --max-time 2 --unix-socket /host/var/run/docker.sock http://docker/_ping >/dev/null; do
                   i=$((i+1)); [ "$i" -ge 90 ] && echo "docker not answering after 180s, starting without it" && exit 0; sleep 2;
                   done; echo "docker answers"
+              # SELinux: a plain container_t may not write Docker's socket (container_var_run_t) or connect to dockerd
+              # (container_runtime_t); the falco container already runs as spc_t, so this adds nothing to the pod.
+              securityContext:
+                seLinuxOptions: { type: spc_t }
               resources:
                 requests: { cpu: 10m, memory: 16Mi }
                 limits: { memory: 64Mi }
