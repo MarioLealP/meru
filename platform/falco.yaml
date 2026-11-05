@@ -46,9 +46,107 @@ spec:
           volumes:
             - name: events
               hostPath: { path: /var/log/falco, type: DirectoryOrCreate }
+            - name: docker-run
+              hostPath: { path: /var/run, type: Directory }
           volumeMounts:
             - name: events
               mountPath: /var/log/falco
+        # Falco asks Docker for container names once, at start. At boot k3s is up before Docker answers, so Falco came up
+        # blind to the compose stacks (10-31 and 11-03, cm-xfav). Wait for Docker's _ping, at most 3 minutes, then
+        # start anyway so the k3s pods stay watched if Docker is gone.
+        extra:
+          initContainers:
+            - name: wait-for-docker
+              image: docker.io/falcosecurity/falco:0.45.1@sha256:69e957f91b3a6beb5c82e2afae33ec3e4479dab2d4421475d288d0cd113cedf6
+              command:
+                - sh
+                - -c
+                - >-
+                  i=0; until curl -sf --max-time 2 --unix-socket /host/var/run/docker.sock http://docker/_ping >/dev/null; do
+                  i=$((i+1)); [ "$i" -ge 90 ] && echo "docker not answering after 180s, starting without it" && exit 0; sleep 2;
+                  done; echo "docker answers"
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits: { memory: 64Mi }
+              volumeMounts:
+                - name: docker-run
+                  mountPath: /host/var/run
+                  readOnly: true
+        customRules:
+          clockmost-rules.yaml: |-
+            # Known, reviewed activity on Bahamut (cm-xfav, first week of events 2026-10-28..11-05). Each entry names the exact
+            # image (or build namespace) and process; nothing is excused by process name alone.
+
+            # CI containers compile and install code by design; the compose images run binaries their own builds placed.
+            - macro: known_drop_and_execute_activities
+              condition: >
+                (container.image.repository = "clockmost/gitea" and proc.exepath = /app/gitea/gitea)
+                or (container.image.repository = "pihole/pihole" and proc.exepath = /usr/bin/pihole-FTL)
+                or (k8s.ns.name endswith "-build" and container.image.repository = "docker.io/moby/buildkit"
+                    and proc.exepath glob "*/.local/tmp/qemu-check*/check")
+                or (k8s.ns.name endswith "-build" and proc.exepath = /tmp/cosign)
+                or (container.name startswith "GITEA-ACTIONS-TASK-")
+              override:
+                condition: replace
+
+            # Gitea's built-in sshd (every git push) and Terraria's healthcheck (bash -c </dev/tcp/127.0.0.1/7777).
+            - macro: user_known_stand_streams_redirect_activities
+              condition: >
+                (container.image.repository = "clockmost/gitea" and proc.exepath in (/usr/sbin/sshd, /usr/lib/ssh/sshd-session))
+                or (container.image.repository = "jacobsmile/tmodloader1.4" and proc.cmdline = "bash -c </dev/tcp/127.0.0.1/7777")
+              override:
+                condition: replace
+
+            # Controllers whose job is the API: Argo, Kyverno, CNPG, cert-manager, ESO, Sindri runners, CNPG instance managers,
+            # Heimdall.
+            - macro: user_known_contact_k8s_api_server_activities
+              condition: >
+                (k8s.ns.name in (argocd, kyverno, cnpg-system, cert-manager, external-secrets))
+                or (k8s.ns.name endswith "-build" and container.image.repository = "docker.io/gitea/runner")
+                or (container.image.repository = "ghcr.io/cloudnative-pg/postgresql" and proc.exepath = /controller/manager)
+                or (k8s.ns.name = heimdall and container.image.repository = "zot.clockmost.com/meru/heimdall")
+              override:
+                condition: replace
+
+            # Wazuh's own checks (host agent + manager), Immich's pg_isready, package installs inside CI containers.
+            - macro: user_known_read_sensitive_files_activities
+              condition: >
+                (proc.exepath in (/var/ossec/bin/wazuh-modulesd, /var/ossec/bin/wazuh-syscheckd)
+                 and (container.id = host or container.image.repository = "wazuh/wazuh-manager"))
+                or (container.image.repository = "ghcr.io/immich-app/postgres" and proc.name = pg_isready)
+                or (container.name startswith "GITEA-ACTIONS-TASK-"
+                    and proc.exepath in (/usr/bin/pacman, /usr/bin/systemd-sysusers, /usr/bin/systemd-tmpfiles))
+              override:
+                condition: replace
+
+            # CNPG's archiver and initdb. Falco's own postgres_running_cnpg expects "sh -c /controller/manager", but CNPG now
+            # runs "sh -c -- /controller/manager", so it never matches.
+            - macro: user_shell_container_exclusions
+              condition: >
+                (container.image.repository = "ghcr.io/cloudnative-pg/postgresql" and proc.pname = postgres
+                 and (proc.cmdline startswith "sh -c -- /controller/manager wal-archive" or proc.cmdline = "sh -c -- locale -a"))
+              override:
+                condition: replace
+
+            # BuildKit truncating its own logs inside a build.
+            - macro: allowed_clear_log_files
+              condition: >
+                (k8s.ns.name endswith "-build" and container.image.repository = "docker.io/moby/buildkit"
+                 and proc.exepath = /usr/bin/buildkitd)
+              override:
+                condition: replace
+
+            # The NVIDIA CDI hook runs ldconfig from a memfd when a GPU container starts (every boot).
+            - list: known_memfd_execution_binaries
+              items: [nvidia-cdi-hook]
+              override:
+                items: append
+
+            # Suricata (compose) captures packets on purpose.
+            - list: user_known_packet_socket_binaries
+              items: [suricata, Suricata-Main]
+              override:
+                items: append
         falco:
           priority: notice # informational/debug rules stay out
           json_output: true
