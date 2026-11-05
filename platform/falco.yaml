@@ -90,6 +90,8 @@ spec:
                     and proc.exepath glob "*/.local/tmp/qemu-check*/check")
                 or (k8s.ns.name endswith "-build" and proc.exepath = /tmp/cosign)
                 or (container.name startswith "GITEA-ACTIONS-TASK-")
+                or (k8s.ns.name endswith "-build" and k8s.pod.name startswith "gitea-actions-task-"
+                    and proc.exepath glob "/tmp/temporal-test-server-sdk-python-*")
               override:
                 condition: replace
 
@@ -102,13 +104,16 @@ spec:
                 condition: replace
 
             # Controllers whose job is the API: Argo, Kyverno, CNPG, cert-manager, ESO, Sindri runners, CNPG instance managers,
-            # Heimdall.
+            # and the Meru apps whose job is the API with their pod token (kubernetesApi: Heimdall, Shikigami, Charon, Anubis).
             - macro: user_known_contact_k8s_api_server_activities
               condition: >
                 (k8s.ns.name in (argocd, kyverno, cnpg-system, cert-manager, external-secrets))
                 or (k8s.ns.name endswith "-build" and container.image.repository = "docker.io/gitea/runner")
                 or (container.image.repository = "ghcr.io/cloudnative-pg/postgresql" and proc.exepath = /controller/manager)
                 or (k8s.ns.name = heimdall and container.image.repository = "zot.clockmost.com/meru/heimdall")
+                or (k8s.ns.name = shikigami and container.image.repository = "zot.clockmost.com/meru/shikigami")
+                or (k8s.ns.name = charon and container.image.repository = "zot.clockmost.com/meru/charon")
+                or (k8s.ns.name = anubis and container.image.repository = "zot.clockmost.com/meru/anubis")
               override:
                 condition: replace
 
