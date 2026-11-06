@@ -51,7 +51,32 @@ An exception is written where it applies, with the reason. A rule without a chec
 - **Dependencies** carry shared checks such as "this record exists" and are chained, not repeated. *review*
 - **API docs off** in production unless the API is public. Routes state `response_model`, `status_code` and their
   error `responses`. *review*
-- **Group by domain** once an app has more than one: each with its own routes, schemas and services. *review*
+- **One router module per resource** in `api/` once an app has more than one; the logic behind it lives in `core/`
+  (see Layout). *review*
+
+## Layout
+
+Every app is laid out the same way, by layer, so anyone can find a thing without reading the app first.
+
+- **The top of `src/<app>/` holds only `__init__.py`, `__main__.py` (the entry point) and `config.py`** (settings).
+  Everything else lives in a folder. *checked*
+- **Fixed folder names**, each used only when the app has that kind of code:
+  - `api/` - the FastAPI app, its dependencies, one router module per resource.
+  - `clients/` - code that talks to an outside system, one module per system (`gitea.py`, `openbao.py`, `kube.py`,
+    `thoth.py`, `temporal.py`, ...). Nothing else calls those systems directly.
+  - `models/` - pydantic and SQLModel models used by more than one folder. A model only one module uses stays in
+    that module.
+  - `core/` - the app's own rules and decisions. Prefer plain functions that take what they need and return a
+    result; outside calls go through `clients/`.
+  - `db/` - tables, the session, and the alembic_utils objects (triggers, functions, grants).
+  - `workflows/` and `activities/` - Temporal apps.
+  - **A job with several steps** (a sweep, a purge, a scan, snapshots) gets its own folder named after it
+    (`sweep/`, `purge/`), holding its steps.
+- **`tests/` mirrors the folders** of `src/<app>/` (`tests/api/`, `tests/core/`, ...); shared fixtures in
+  `tests/conftest.py`. *review*
+- **A layout pass moves code, it doesn't change it:** same behaviour, imports and entry points updated, every check
+  green before and after. *review*
+- **Atlas** is several packages in one repo; each package follows this inside. *review*
 
 ## Tests
 
