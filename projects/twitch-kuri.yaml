@@ -1,0 +1,21 @@
+# Twitch-kuri's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-twitch-kuri
+  namespace: argocd
+spec:
+  description: "Twitch-kuri - Twitch Drops Miner - collects game drops for Kuri's Twitch account"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/twitch-kuri.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: twitch-kuri
+    - server: https://kubernetes.default.svc
+      namespace: twitch-kuri-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: twitch-kuri }
+    - { group: "", kind: Namespace, name: twitch-kuri-build }

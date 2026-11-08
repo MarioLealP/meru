@@ -20,6 +20,7 @@ resources:
   - projects/twitch-andre.yaml
   - projects/twitch-mario.yaml
   - projects/twitch-robin.yaml
+  - projects/twitch-kuri.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
