@@ -16,6 +16,7 @@ resources:
   - projects/glitchtip.yaml
   - projects/paissa-map.yaml
   - projects/herosiege-filter.yaml
+  - projects/twitch-mira.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml

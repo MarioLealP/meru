@@ -1,0 +1,21 @@
+# Twitch-mira's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-twitch-mira
+  namespace: argocd
+spec:
+  description: "Twitch-mira - Twitch Drops Miner - collects game drops for Mira's Twitch account"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/twitch-mira.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: twitch-mira
+    - server: https://kubernetes.default.svc
+      namespace: twitch-mira-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: twitch-mira }
+    - { group: "", kind: Namespace, name: twitch-mira-build }
