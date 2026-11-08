@@ -17,6 +17,7 @@ resources:
   - projects/paissa-map.yaml
   - projects/herosiege-filter.yaml
   - projects/twitch-mira.yaml
+  - projects/twitch-andre.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
