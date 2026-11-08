@@ -1,9 +1,12 @@
 """Check every app fence (AppProject meru-<app>) in a rendered Meru/meru against the one shape an app may have.
 
 An app's fence is trust: what it can deploy and where. So it must name only the app's own repo plus the shared
-charts, only the app's two namespaces, and the shared kinds list - anything more fails here.
+charts, only the app's own namespaces - its own, its build's, then any environments' <app>-<env> (D126) - and the shared
+kinds list; anything more fails here. Which environments an app may have is its request's call, checked by Xolotl
+before the fence merges; here only their shape.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -16,10 +19,19 @@ KINDS = yaml.safe_load(Path(__file__).resolve().parent.parent.joinpath("projects
 ]
 
 
+ENVIRONMENT = re.compile(r"^[a-z][a-z0-9]{0,7}$")  # Shikigami's request format: an environment's name (D126)
+
+
 def problems(project: dict) -> list[str]:
     app = project["metadata"]["name"].removeprefix("meru-")
-    namespaces = [app, f"{app}-build"]
     spec = project["spec"]
+    # the environments are whatever namespaces the fence lists after the build's, if each is <app>-<valid name>
+    listed = [d.get("namespace", "") for d in spec.get("destinations") or []]
+    environments = [ns.removeprefix(f"{app}-") for ns in listed[2:]]
+    bad = [ns for ns, env in zip(listed[2:], environments, strict=True) if ns == env or not ENVIRONMENT.match(env)]
+    if bad or "build" in environments or len(environments) != len(set(environments)):
+        return [f"destinations: {listed!r} - after {app} and {app}-build only {app}-<environment> namespaces"]
+    namespaces = [app, f"{app}-build", *(f"{app}-{env}" for env in environments)]
     expected = {
         "description": spec.get("description"),
         "sourceRepos": [f"https://git.clockmost.com/Meru/{app}.git", *CHARTS],
