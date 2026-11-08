@@ -18,6 +18,7 @@ resources:
   - projects/herosiege-filter.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
+  - appsets/meru-envs.yaml
   # Workload identities' rights - each one exact, with its reason.
   - rbac/shikigami-reads-apps.yaml
   - rbac/heimdall-reads-cluster.yaml

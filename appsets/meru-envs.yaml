@@ -1,0 +1,141 @@
+# Finds Meru apps' further environments (D126): every deploy/envs/<env>/meru.yaml in a Meru repo with deploy/meru.yaml
+# gets one Application, env-<repo>-<env>, into namespace <repo>-<env>, in the app's own fence meru-<repo>. It renders
+# the nuwa-app chart from deploy/envs/<env>/values.yaml and never builds: an environment runs the image the app's own
+# builds made, pinned by digest - promoting is a PR that copies a tested digest into that file. The app itself (app-<repo>,
+# namespace <repo>, meru-apps.yaml) is the first environment and the one every build goes to.
+# The request is the gate: Shikigami widens the fence only for the environments the request names (checked by Xolotl),
+# so an envs/ folder nobody asked for generates an Application whose namespace the fence refuses - it deploys nothing.
+# Kyverno trusts the app's own signing key in <repo>-<env> (keys/meru-signing-keys.yaml, same step).
+# What the marker holds: owner and chart (as deploy/meru.yaml), optional database: "true" (quoted: the post selector compares strings) for meru-env-databases below.
+# Names: env-/envdb- can't meet app-<repo> (meru-apps) or each other - an environment's name has no hyphen, so
+# env-<repo>-<env> is never another repo's environment either. Deletes as meru-apps: the Application goes with its folder
+# or repo, never what it runs (Charon purges that).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: meru-envs
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    applicationsSync: sync
+    preserveResourcesOnDeletion: true
+  generators:
+    - matrix:
+        generators:
+          - scmProvider:
+              cloneProtocol: https
+              gitea:
+                owner: Meru
+                api: https://git.clockmost.com/
+                excludeArchivedRepos: true
+              filters:
+                - pathsExist: [deploy/meru.yaml]
+              requeueAfterSeconds: 180
+          - git:
+              repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+              revision: "{{ .branch }}"
+              files:
+                - path: deploy/envs/*/meru.yaml
+  template:
+    metadata:
+      name: "env-{{ .repository }}-{{ index .path.segments 2 }}"
+      namespace: argocd
+    spec:
+      project: "meru-{{ .repository }}"
+      sources: []
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .repository }}-{{ index .path.segments 2 }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            pod-security.kubernetes.io/enforce: restricted
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/app: "{{ .repository }}"
+            meru.clockmost.com/environment: "{{ index .path.segments 2 }}"
+            meru.clockmost.com/owner: "{{ .owner }}"
+        retry:
+          limit: 10
+          backoff: { duration: 30s, factor: 2, maxDuration: 10m }
+  templatePatch: |
+    spec:
+      sources:
+        - repoURL: https://git.clockmost.com/Meru/nuwa.git
+          targetRevision: {{ .chart | quote }}
+          path: charts/nuwa-app
+          helm:
+            releaseName: {{ .repository | quote }}
+            valueFiles:
+              - {{ printf "$app/deploy/envs/%s/values.yaml" (index .path.segments 2) | quote }}
+        - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
+          targetRevision: {{ .branch | quote }}
+          ref: app
+---
+# An environment's database (D126): a marker with database: "true" gets envdb-<repo>-<env> from
+# deploy/envs/<env>/database/, into the environment's namespace - as meru-databases.yaml does for the app itself: its own
+# Application so no app deploy can touch the data, never pruned, the Cluster carries Prune=false,Delete=false.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: meru-env-databases
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  syncPolicy:
+    preserveResourcesOnDeletion: true
+  generators:
+    - matrix:
+        generators:
+          - scmProvider:
+              cloneProtocol: https
+              gitea:
+                owner: Meru
+                api: https://git.clockmost.com/
+              filters:
+                - pathsExist: [deploy/meru.yaml]
+              requeueAfterSeconds: 180
+          - git:
+              repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+              revision: "{{ .branch }}"
+              files:
+                - path: deploy/envs/*/meru.yaml
+      selector:
+        matchLabels:
+          database: "true"
+  template:
+    metadata:
+      name: "envdb-{{ .repository }}-{{ index .path.segments 2 }}"
+      namespace: argocd
+    spec:
+      project: "meru-{{ .repository }}"
+      source:
+        repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
+        targetRevision: "{{ .branch }}"
+        path: "deploy/envs/{{ index .path.segments 2 }}/database"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .repository }}-{{ index .path.segments 2 }}"
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            pod-security.kubernetes.io/enforce: restricted
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/app: "{{ .repository }}"
+            meru.clockmost.com/environment: "{{ index .path.segments 2 }}"
+            meru.clockmost.com/owner: "{{ .owner }}"
+        retry:
+          limit: 10
+          backoff: { duration: 30s, factor: 2, maxDuration: 10m }
