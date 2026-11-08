@@ -1,0 +1,21 @@
+# Herosiege-filter's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-herosiege-filter
+  namespace: argocd
+spec:
+  description: "Herosiege-filter - Hero Siege loot filter - archetype picker, SPA + stateless API"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/herosiege-filter.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: herosiege-filter
+    - server: https://kubernetes.default.svc
+      namespace: herosiege-filter-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: herosiege-filter }
+    - { group: "", kind: Namespace, name: herosiege-filter-build }

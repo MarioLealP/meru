@@ -15,6 +15,7 @@ resources:
   - projects/anubis.yaml
   - projects/glitchtip.yaml
   - projects/paissa-map.yaml
+  - projects/herosiege-filter.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   # Workload identities' rights - each one exact, with its reason.
