@@ -55,6 +55,12 @@ spec:
           enabled: false # no cleanup policies
         reportsController:
           enabled: true # policy reports: what passes/fails, also for things already running
+          # The chart's 128Mi limit was too tight: by 2026-11-08 the controller had hit it 3.3M times. At its
+          # limit the kernel drops the controller's own code pages and reads them back from disk - 3.4 GB of
+          # reads in 5 s - which, with builds swapping, starved etcd and k3s restarted.
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 512Mi }
   destination:
     server: https://kubernetes.default.svc
     namespace: kyverno
