@@ -82,6 +82,9 @@ spec:
             # image (or build namespace) and process; nothing is excused by process name alone.
 
             # CI containers compile and install code by design; the compose images run binaries their own builds placed.
+            # Renovate (compose, ops/renovate) installs the tools a repo needs (cargo, ...) into containerbase at run time;
+            # uv check jobs fetch a Rust toolchain (puccinialin) to build a wheel. 2026-11-09: these were 185 phone pages
+            # a night through Wazuh rule 100162.
             - macro: known_drop_and_execute_activities
               condition: >
                 (container.image.repository = "clockmost/gitea" and proc.exepath = /app/gitea/gitea)
@@ -92,6 +95,11 @@ spec:
                 or (container.name startswith "GITEA-ACTIONS-TASK-")
                 or (k8s.ns.name endswith "-build" and k8s.pod.name startswith "gitea-actions-task-"
                     and proc.exepath glob "/tmp/temporal-test-server-sdk-python-*")
+                or (container.image.repository = "renovate/renovate" and container.name = "clockmost-renovate"
+                    and proc.exepath glob "/opt/containerbase/tools/*")
+                or (k8s.ns.name endswith "-build" and k8s.pod.name startswith "gitea-actions-task-"
+                    and container.image.repository = "ghcr.io/astral-sh/uv"
+                    and (proc.exepath glob "/tmp/.cache/puccinialin/*" or proc.exepath glob "/tmp/uv-cache/builds-v0/*"))
               override:
                 condition: replace
 
