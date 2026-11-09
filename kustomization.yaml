@@ -25,6 +25,7 @@ resources:
   - projects/ntfy.yaml
   - projects/obsidian.yaml
   - projects/searxng.yaml
+  - projects/felt-vision.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
