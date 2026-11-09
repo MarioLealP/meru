@@ -22,6 +22,7 @@ resources:
   - projects/twitch-robin.yaml
   - projects/twitch-kuri.yaml
   - projects/whoami.yaml
+  - projects/ntfy.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
