@@ -1,0 +1,21 @@
+# Whoami's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-whoami
+  namespace: argocd
+spec:
+  description: "Whoami - whoami - echo page showing the request and the Authentik headers, for debugging forward-auth"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/whoami.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: whoami
+    - server: https://kubernetes.default.svc
+      namespace: whoami-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: whoami }
+    - { group: "", kind: Namespace, name: whoami-build }
