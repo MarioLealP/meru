@@ -2,8 +2,9 @@
 # own fence meru-<repo> (projects/). A repo with the file but no fence deploys nothing. The namespace is always the
 # repo's name. What the file holds: owner, chart (the nuwa-app release it was tested with), build (true: also its
 # build namespace + Sindri runner) - all required - and optional buildLabels (extra runner labels -> the image their
-# jobs run in, e.g. sindri-check for tests; never sindri itself: only its jobs get the build keys). The app's
-# database, if any, is meru-databases.yaml's.
+# jobs run in, e.g. sindri-check for tests; never sindri itself: only its jobs get the build keys) and buildLimits (a
+# bigger build than the 4Gi / 1h every app gets: memory 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA
+# llama.cpp; the build slots still cap it at two jobs at once). The app's database, if any, is meru-databases.yaml's.
 # The app- prefix keeps a repo from taking over a platform Application of the same name (the controller adopts any
 # unowned Application it generates the name of).
 # Deletes (D86): Argo's default is to never delete a generated Application; this one opts in (applicationsSync: sync),
@@ -91,5 +92,14 @@ spec:
               {{- range $label, $image := .buildLabels }}
                 {{ $label | quote }}: {{ $image | quote }}
               {{- end }}
+            {{- end }}
+            {{- if hasKey . "buildLimits" }}
+            {{- $memory := get .buildLimits "memory" | default "4Gi" | toString }}
+            {{- $timeout := get .buildLimits "timeout" | default "1h" | toString }}
+            {{- if not (regexMatch "^([4-9]|1[0-6])Gi$" $memory) }}{{ fail "deploy/meru.yaml: buildLimits.memory must be 4Gi-16Gi" }}{{ end }}
+            {{- if not (regexMatch "^[1-3]h$" $timeout) }}{{ fail "deploy/meru.yaml: buildLimits.timeout must be 1h-3h" }}{{ end }}
+              buildMemoryLimit: {{ $memory | quote }}
+              runner:
+                timeout: {{ $timeout | quote }}
             {{- end }}
       {{- end }}
