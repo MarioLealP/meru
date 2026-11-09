@@ -24,6 +24,7 @@ resources:
   - projects/whoami.yaml
   - projects/ntfy.yaml
   - projects/obsidian.yaml
+  - projects/searxng.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
