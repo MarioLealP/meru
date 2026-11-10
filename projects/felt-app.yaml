@@ -1,0 +1,21 @@
+# Felt-app's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-felt-app
+  namespace: argocd
+spec:
+  description: "Felt-app - felt-app - the Felt app's web UI (static), served at felt.clockmost.com/app"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/felt-app.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: felt-app
+    - server: https://kubernetes.default.svc
+      namespace: felt-app-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: felt-app }
+    - { group: "", kind: Namespace, name: felt-app-build }
