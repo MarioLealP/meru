@@ -1,0 +1,21 @@
+# Poe2rag's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-poe2rag
+  namespace: argocd
+spec:
+  description: "Poe2rag - poe2rag - Path of Exile 2 wiki answers over a local index, worded by felt-llm"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/poe2rag.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: poe2rag
+    - server: https://kubernetes.default.svc
+      namespace: poe2rag-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: poe2rag }
+    - { group: "", kind: Namespace, name: poe2rag-build }
