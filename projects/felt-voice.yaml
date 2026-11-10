@@ -1,0 +1,21 @@
+# Felt-voice's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-felt-voice
+  namespace: argocd
+spec:
+  description: "Felt-voice - felt-voice - Felt's speech in and out (Parakeet, Sopro, Teto RVC on the GPU), no route"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/felt-voice.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: felt-voice
+    - server: https://kubernetes.default.svc
+      namespace: felt-voice-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: felt-voice }
+    - { group: "", kind: Namespace, name: felt-voice-build }
