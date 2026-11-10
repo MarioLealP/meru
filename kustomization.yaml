@@ -30,6 +30,7 @@ resources:
   - projects/felt-voice.yaml
   - projects/poe2rag.yaml
   - projects/felt-app.yaml
+  - projects/drive-rag.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
