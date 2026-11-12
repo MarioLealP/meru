@@ -34,6 +34,7 @@ resources:
   - projects/felt-core.yaml
   - projects/nova-lemuria.yaml
   - projects/ddns.yaml
+  - projects/factorio.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
