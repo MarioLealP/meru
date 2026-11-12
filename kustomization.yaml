@@ -33,6 +33,7 @@ resources:
   - projects/drive-rag.yaml
   - projects/felt-core.yaml
   - projects/nova-lemuria.yaml
+  - projects/ddns.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
