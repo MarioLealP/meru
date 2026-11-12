@@ -1,0 +1,83 @@
+# Argo reads private Meru repos (cm-8ope, D48): one read-only Gitea bot, `argocd-reader` (Read team over every Meru
+# repo, token scopes read:repository + read:organization), made by clockmost-infra's
+# projects/openbao/admin/meru-argocd-identities.sh, its token in OpenBao at apps/meru/argocd/eso/gitea. ESO turns it
+# into two Secrets here; nobody types or stores the token anywhere else.
+# - meru-repo-creds: a credential template - every repo URL under https://git.clockmost.com/Meru/ (the apps, the
+#   nuwa chart, this repo) is fetched with it. Public repos read the same as before; private ones now read too.
+# - meru-gitea-scm: the token the app scans (appsets/) ask Gitea with, so private repos show up in the list. Without
+#   it a repo that goes private drops out of the scan and its Application is deleted (D86).
+# If the token stops working Gitea refuses every fetch, public ones included: fix the token (re-run the script with
+# ROTATE_GITEA_TOKEN=1), or delete meru-repo-creds by hand to fall back to anonymous reads.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eso # the identity ESO borrows to log in to OpenBao (role meru-argocd-eso); no pod runs as it
+automountServiceAccountToken: false
+---
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: openbao
+spec:
+  provider:
+    vault:
+      server: https://openbao.clockmost.internal:8204
+      path: apps
+      version: v2
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ1RENDQVQrZ0F3SUJBZ0lVZGhFWDJENlFNdkFTQnRTRzBVbXZnNi84MmJVd0NnWUlLb1pJemowRUF3TXcKSERFYU1CZ0dBMVVFQXd3UlkyeHZZMnR0YjNOMElISnZiM1FnUTBFd0hoY05Nall4TURBMk1UVTFNakkwV2hjTgpNell4TURBek1UVTFNakkwV2pBY01Sb3dHQVlEVlFRRERCRmpiRzlqYTIxdmMzUWdjbTl2ZENCRFFUQjJNQkFHCkJ5cUdTTTQ5QWdFR0JTdUJCQUFpQTJJQUJOMnNSNEdubE1IN3ArcWczZ2NOUWRzckl5T0N6REpQZnBrRDRIL3EKd2VxWEdsWHNpaWJ6b2lhWDM4NTV4R3hOQkYxbkg5dlZGamhOelB0dmZEamhSZ1ZzTXNtVGw0cG9LSDBQMU5TcgphTFdkOUwwdmw0aHdSWStpNVVEYlBXZW01YU5DTUVBd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBT0JnTlZIUThCCkFmOEVCQU1DQVFZd0hRWURWUjBPQkJZRUZNVXdMRVE1RTdpMTQrUnNBUXU2eVNLNHpGeFVNQW9HQ0NxR1NNNDkKQkFNREEyY0FNR1FDTUNmamZKczd2RThFTyt2Q21UdzJsNFFGWXV2MVRIMVlVakZ3ZWRQcHZqa1R4ZTFqZ1lWVgpFRW15WHFQU29xQjNtZ0l3TWlQMC8xRzZYRlJ4TVQraEhqMTYrdU9qdjZsM25xUHVVV29tc09RYWtQRjVpNTFVCkF3cXZ6WmpmemxyNFdVOW8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo= # the clockmost root CA (same as nuwa-app's openbao.caCert)
+      auth:
+        kubernetes:
+          mountPath: kubernetes
+          role: meru-argocd-eso
+          serviceAccountRef:
+            name: eso
+            audiences: [openbao]
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: meru-repo-creds
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: openbao
+    kind: SecretStore
+  target:
+    name: meru-repo-creds
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      metadata:
+        labels:
+          argocd.argoproj.io/secret-type: repo-creds
+      data:
+        type: git
+        url: https://git.clockmost.com/Meru/
+        username: "{{ .username }}"
+        password: "{{ .token }}"
+  dataFrom:
+    - extract:
+        key: meru/argocd/eso/gitea
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: meru-gitea-scm
+spec:
+  refreshInterval: 5m
+  secretStoreRef:
+    name: openbao
+    kind: SecretStore
+  target:
+    name: meru-gitea-scm
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      metadata:
+        labels:
+          argocd.argoproj.io/secret-type: scm-creds # what Argo's strict tokenRef mode accepts
+      data:
+        token: "{{ .token }}"
+  dataFrom:
+    - extract:
+        key: meru/argocd/eso/gitea

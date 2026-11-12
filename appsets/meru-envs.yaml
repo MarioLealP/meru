@@ -29,6 +29,7 @@ spec:
               gitea:
                 owner: Meru
                 api: https://git.clockmost.com/
+                tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
                 excludeArchivedRepos: true
               filters:
                 - pathsExist: [deploy/meru.yaml]
@@ -99,6 +100,7 @@ spec:
               gitea:
                 owner: Meru
                 api: https://git.clockmost.com/
+                tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
               filters:
                 - pathsExist: [deploy/meru.yaml]
               requeueAfterSeconds: 180

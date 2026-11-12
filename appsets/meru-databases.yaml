@@ -21,6 +21,7 @@ spec:
               gitea:
                 owner: Meru
                 api: https://git.clockmost.com/
+                tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
               filters:
                 - pathsExist: [deploy/meru.yaml, deploy/database]
               requeueAfterSeconds: 180
