@@ -1,0 +1,27 @@
+# Nova-lemuria's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its namespaces - the app's, its build's and its environments' (D126) - which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-nova-lemuria
+  namespace: argocd
+spec:
+  description: "Nova-lemuria - nova-lemuria - the therapy practice site and blog (dev; uat and prod as environments)"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/nova-lemuria.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: nova-lemuria
+    - server: https://kubernetes.default.svc
+      namespace: nova-lemuria-build
+    - server: https://kubernetes.default.svc
+      namespace: nova-lemuria-uat
+    - server: https://kubernetes.default.svc
+      namespace: nova-lemuria-prod
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: nova-lemuria }
+    - { group: "", kind: Namespace, name: nova-lemuria-build }
+    - { group: "", kind: Namespace, name: nova-lemuria-uat }
+    - { group: "", kind: Namespace, name: nova-lemuria-prod }
