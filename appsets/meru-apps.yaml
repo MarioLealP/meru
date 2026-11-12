@@ -1,12 +1,12 @@
-# Finds Meru apps: every public repo in the Meru org with a deploy/meru.yaml gets one Application, app-<repo>, in its
-# own fence meru-<repo> (projects/). A repo with the file but no fence deploys nothing. The namespace is always the
-# repo's name. What the file holds: owner, chart (the nuwa-app release it was tested with), build (true: also its
-# build namespace + Sindri runner) - all required - and optional buildLabels (extra runner labels -> the image their
-# jobs run in, e.g. sindri-check for tests; never sindri itself: only its jobs get the build keys) and buildLimits (a
-# bigger build than the 4Gi / 1h every app gets: memory 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA
-# llama.cpp; the build slots still cap it at two jobs at once). The app's database, if any, is meru-databases.yaml's.
-# The app- prefix keeps a repo from taking over a platform Application of the same name (the controller adopts any
-# unowned Application it generates the name of).
+# Finds Meru apps: every repo in the Meru org (public or private - Argo reads with argocd/gitea-reader.yaml's login)
+# with a deploy/meru.yaml gets one Application, app-<repo>, in its own fence meru-<repo> (projects/). A repo with the
+# file but no fence deploys nothing. The namespace is always the repo's name. What the file holds: owner, chart (the
+# nuwa-app release it was tested with), build (true: also its build namespace + Sindri runner) - all required - and
+# optional buildLabels (extra runner labels -> the image their jobs run in, e.g. sindri-check for tests; never sindri
+# itself: only its jobs get the build keys) and buildLimits (a bigger build than the 4Gi / 1h every app gets: memory
+# 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA llama.cpp; the build slots still cap it at two jobs at once).
+# The app's database, if any, is meru-databases.yaml's. The app- prefix keeps a repo from taking over a platform
+# Application of the same name (the controller adopts any unowned Application it generates the name of).
 # Deletes (D86): Argo's default is to never delete a generated Application; this one opts in (applicationsSync: sync),
 # so an app leaves Argo when its repo is archived or its marker parked (Shikigami's retire pass, D85). Deleting the
 # Application never deletes what it runs (preserveResourcesOnDeletion) - Charon purges that later; a wrongly dropped
@@ -30,6 +30,7 @@ spec:
               gitea:
                 owner: Meru
                 api: https://git.clockmost.com/
+                tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
                 excludeArchivedRepos: true # retired apps (D85) and hand-built leftovers (echo-by-hand)
               filters:
                 - pathsExist: [deploy/meru.yaml]

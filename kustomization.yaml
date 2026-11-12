@@ -36,6 +36,8 @@ resources:
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
+  # Argo's read-only Gitea login (private Meru repos, cm-8ope).
+  - argocd/gitea-reader.yaml
   # Workload identities' rights - each one exact, with its reason.
   - rbac/shikigami-reads-apps.yaml
   - rbac/heimdall-reads-cluster.yaml
