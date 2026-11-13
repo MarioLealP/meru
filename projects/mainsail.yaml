@@ -1,0 +1,21 @@
+# Mainsail's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-mainsail
+  namespace: argocd
+spec:
+  description: "Mainsail - mainsail - web UI for the Ender-3 Max Neo (Klipper/Moonraker), behind ender.clockmost.com"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/mainsail.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: mainsail
+    - server: https://kubernetes.default.svc
+      namespace: mainsail-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: mainsail }
+    - { group: "", kind: Namespace, name: mainsail-build }
