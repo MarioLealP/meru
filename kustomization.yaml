@@ -38,6 +38,7 @@ resources:
   - projects/terraria.yaml
   - projects/mainsail.yaml
   - projects/ender.yaml
+  - projects/immich-ml.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml

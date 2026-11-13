@@ -1,0 +1,21 @@
+# Immich-ml's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-immich-ml
+  namespace: argocd
+spec:
+  description: "Immich-ml - immich-ml - machine learning (faces, smart search) for the immich photo library"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/immich-ml.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: immich-ml
+    - server: https://kubernetes.default.svc
+      namespace: immich-ml-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: immich-ml }
+    - { group: "", kind: Namespace, name: immich-ml-build }
