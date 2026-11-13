@@ -54,6 +54,7 @@ resources:
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
   - platform/cert-manager.yaml
   - platform/cnpg.yaml
+  - platform/device-plugin.yaml
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml

@@ -1,0 +1,88 @@
+# squat/generic-device-plugin (https://github.com/squat/generic-device-plugin; Red Hat ships it in MicroShift 4.20).
+# No versioned releases: the image is the commit tag f7c3291 (2026-10-26, = latest then) pinned by digest; the
+# security settings follow upstream's own hardened chart (generic-device-plugin-0.2.0: drop ALL, read-only root).
+# Root is needed for the socket in /var/lib/kubelet/device-plugins (root-owned); /dev is mounted read-only - it only
+# lists device nodes and follows symlinks.
+#
+# Devices - each one a resource clockmost.com/<name>, only what's listed here:
+#   ender  the Ender-3 Max Neo's CH340 by its stable by-id link, mounted in the pod as /dev/ender. The kubelet hands
+#          containerd the *link*, resolved at every container start - after a printer power cycle (new ttyUSBn) a
+#          restart of the using container gets the new node (the app's liveness probe does that). rw only, no mknod.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: generic-device-plugin
+  labels:
+    app.kubernetes.io/name: generic-device-plugin
+    app.kubernetes.io/part-of: meru
+    meru.clockmost.com/owner: platform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: generic-device-plugin
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: generic-device-plugin
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    spec:
+      serviceAccountName: generic-device-plugin
+      automountServiceAccountToken: false
+      priorityClassName: system-node-critical
+      tolerations:
+        - operator: Exists
+          effect: NoExecute
+        - operator: Exists
+          effect: NoSchedule
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: generic-device-plugin
+          image: ghcr.io/squat/generic-device-plugin:f7c3291@sha256:8dc84958301f054bf72d9753a7a2c9af3d6642a9844b34d1171b3f2cdb4a15f6
+          args:
+            - --domain
+            - clockmost.com
+            - --device
+            - |
+              name: ender
+              groups:
+                - paths:
+                    - path: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
+                      mountPath: /dev/ender
+                      permissions: rw
+          ports:
+            - name: http
+              containerPort: 8080
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: dev
+              mountPath: /dev
+              readOnly: true
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+            type: Directory
+        - name: dev
+          hostPath:
+            path: /dev
+            type: Directory
