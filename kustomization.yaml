@@ -36,6 +36,7 @@ resources:
   - projects/ddns.yaml
   - projects/factorio.yaml
   - projects/terraria.yaml
+  - projects/mainsail.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
