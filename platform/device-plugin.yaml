@@ -1,0 +1,28 @@
+# The node's device plugin (wave F, 2026-11-13): hands single host devices to pods as extended resources, so a pod
+# that needs one (the Ender's USB serial) stays Pod Security "restricted" - no hostPath, no privileged. Plain
+# manifests in platform/device-plugin/ (squat/generic-device-plugin, pinned by digest; the upstream chart has no Helm
+# repo). kube-system is where node plugins live and is already outside Kyverno's webhooks (platform/kyverno.yaml).
+# New host power: reads the host's /dev and owns a socket in the kubelet's device-plugins dir - Mario reviews.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: device-plugin
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/meru.git
+    targetRevision: main
+    path: platform/device-plugin
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
