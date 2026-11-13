@@ -40,6 +40,11 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+        # SELinux (Bahamut enforces): the default container_t may not connect to the kubelet's socket (AVC denied
+        # connectto ... tcontext container_runtime_t, 2026-11-13). container-selinux ships a type for exactly this
+        # job - container_device_plugin_t: the kubelet socket + device nodes, far narrower than spc_t.
+        seLinuxOptions:
+          type: container_device_plugin_t
       containers:
         - name: generic-device-plugin
           image: ghcr.io/squat/generic-device-plugin:f7c3291@sha256:8dc84958301f054bf72d9753a7a2c9af3d6642a9844b34d1171b3f2cdb4a15f6
