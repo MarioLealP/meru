@@ -54,6 +54,10 @@ spec:
                     - path: /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
                       mountPath: /dev/ender
                       permissions: rw
+          # The kubelet's default /dev/termination-log can't be created inside the read-only host /dev
+          # (runc: "make mountpoint /dev/termination-log: read-only file system", 2026-11-13) - keep /dev read-only,
+          # move the message file out of it.
+          terminationMessagePath: /termination-log
           ports:
             - name: http
               containerPort: 8080
