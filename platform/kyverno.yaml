@@ -49,8 +49,15 @@ spec:
                   resources: [deployments]
                   verbs: [get, list, watch, update, patch]
           resources:
-            requests: { cpu: 20m, memory: 64Mi }
-            limits: { memory: 128Mi }
+            # 128Mi was too tight once restart-on-secret-change had a backlog (49 pending UpdateRequests,
+            # 2026-11-13): OOMKilled 78 times, and in between Go's GC spun at ~110/128Mi burning 6-8 cores -
+            # the whole server slowed (Gitea timeouts, load 35). Memory headroom + a CPU cap so it can't do
+            # that again; GOMEMLIMIT below the limit makes the GC give way before the OOM killer acts.
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          extraEnvVars:
+            - name: GOMEMLIMIT
+              value: 450MiB
         cleanupController:
           enabled: false # no cleanup policies
         reportsController:
