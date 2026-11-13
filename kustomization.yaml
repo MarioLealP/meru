@@ -39,6 +39,7 @@ resources:
   - projects/mainsail.yaml
   - projects/ender.yaml
   - projects/immich-ml.yaml
+  - projects/immich.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml

@@ -1,0 +1,21 @@
+# Immich's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-immich
+  namespace: argocd
+spec:
+  description: "Immich - immich - self-hosted photo and video library (Google Photos replacement)"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/immich.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: immich
+    - server: https://kubernetes.default.svc
+      namespace: immich-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: immich }
+    - { group: "", kind: Namespace, name: immich-build }
