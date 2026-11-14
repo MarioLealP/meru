@@ -1,0 +1,21 @@
+# Zabbix's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-zabbix
+  namespace: argocd
+spec:
+  description: "Zabbix - zabbix - monitoring server (agents, SNMP, k3s, web checks) that pages Mario"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/zabbix.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: zabbix
+    - server: https://kubernetes.default.svc
+      namespace: zabbix-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: zabbix }
+    - { group: "", kind: Namespace, name: zabbix-build }
