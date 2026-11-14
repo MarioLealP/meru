@@ -1,0 +1,21 @@
+# Openbao's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-openbao
+  namespace: argocd
+spec:
+  description: "Openbao - openbao - the official vault server binary, signed for Bahamut's host (nothing runs in k3s)"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/openbao.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: openbao
+    - server: https://kubernetes.default.svc
+      namespace: openbao-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: openbao }
+    - { group: "", kind: Namespace, name: openbao-build }
