@@ -36,7 +36,7 @@ spec:
                 excludeArchivedRepos: true # retired apps (D85) and hand-built leftovers (echo-by-hand)
               filters:
                 - pathsExist: [deploy/meru.yaml]
-              requeueAfterSeconds: 900 # 15 min (was 180: 4 scans of every repo kept SQLite Gitea busy, 2026-11-14)
+              requeueAfterSeconds: 300 # 5 min: this scan makes new apps (and their build runners); 15 min kept onboarding waiting
           - git:
               repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
               revision: "{{ .branch }}"
