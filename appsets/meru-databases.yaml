@@ -24,7 +24,7 @@ spec:
                 tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
               filters:
                 - pathsExist: [deploy/meru.yaml, deploy/database]
-              requeueAfterSeconds: 180
+              requeueAfterSeconds: 900 # 15 min (was 180: 4 scans of every repo kept SQLite Gitea busy, 2026-11-14)
           - git:
               repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
               revision: "{{ .branch }}"
