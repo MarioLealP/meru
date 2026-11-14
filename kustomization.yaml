@@ -43,6 +43,7 @@ resources:
   - projects/zabbix-web.yaml
   - projects/zabbix.yaml
   - projects/caddy.yaml
+  - projects/cloudflared.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
