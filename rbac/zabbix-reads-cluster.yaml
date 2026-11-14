@@ -1,7 +1,7 @@
-# Zabbix's read of the cluster (D108), for the server as a Meru app (Meru/zabbix, namespace zabbix): the same rights
-# compose's Zabbix has through clockmost-infra ops/k3s/manifests/zabbix-reader.yaml, now for the app's own service
-# account. It calls the API through a kubectl-proxy sidecar on its pod's projected token (10 minutes, renewed by the
-# kubelet) - no long-lived token Secret, nothing copied into a Zabbix macro.
+# Zabbix's read of the cluster (D108), for the server as a Meru app (Meru/zabbix, namespace zabbix), on the app's own
+# service account (compose's zabbix-reader token went with compose's Zabbix, 2026-11-14). It calls the API through a
+# kubectl-proxy sidecar on its pod's projected token (10 minutes, renewed by the kubelet) - no long-lived token Secret,
+# nothing copied into a Zabbix macro.
 # - get + list CronJobs: each one's last successful run (ops/zabbix/zbx29).
 # - list pods: containers stuck crash-looping or unable to pull their image (zbx34). A pod spec shows no secret values:
 #   Meru charts take them by reference.

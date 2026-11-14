@@ -1,6 +1,5 @@
 # Anubis's findings (D114, D115): each run writes what is stuck in Thoth into the ConfigMap anubis-findings in its own
-# namespace, and Zabbix reads that one object - built as if Zabbix ran in k3s; today's Docker Zabbix reaches it with
-# D108's zabbix-reader token. Anubis may create ConfigMaps only in its namespace (create can't be narrowed to a name)
+# namespace, and Zabbix (Meru/zabbix, through its kubectl-proxy sidecar) reads that one object. Anubis may create ConfigMaps only in its namespace (create can't be narrowed to a name)
 # and change only that one; Zabbix may read only that one.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -51,9 +50,6 @@ roleRef:
   kind: Role
   name: zabbix-reads-anubis-findings
 subjects:
-  - kind: ServiceAccount
-    name: zabbix
-    namespace: zabbix-reader # compose's Zabbix (D108's token) - goes when compose's Zabbix is retired
   - kind: ServiceAccount
     name: zabbix
     namespace: zabbix # Meru/zabbix's server, through its kubectl-proxy sidecar on its own pod token
