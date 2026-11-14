@@ -4,7 +4,9 @@
 # nuwa-app release it was tested with), build (true: also its build namespace + Sindri runner) - all required - and
 # optional buildLabels (extra runner labels -> the image their jobs run in, e.g. sindri-check for tests; never sindri
 # itself: only its jobs get the build keys) and buildLimits (a bigger build than the 4Gi / 1h every app gets: memory
-# 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA llama.cpp; the build slots still cap it at two jobs at once).
+# 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA llama.cpp; the build slots still cap it at two jobs at once)
+# and workload (default true; false = a host binary from template nuwa/binary: only the build side renders, no nuwa-app
+# chart - nothing of it runs in the cluster, a host timer installs its signed image, D129 / cm-1rpd).
 # The app's database, if any, is meru-databases.yaml's. The app- prefix keeps a repo from taking over a platform
 # Application of the same name (the controller adopts any unowned Application it generates the name of).
 # Deletes (D86): Argo's default is to never delete a generated Application; this one opts in (applicationsSync: sync),
@@ -66,8 +68,12 @@ spec:
           limit: 10
           backoff: { duration: 30s, factor: 2, maxDuration: 10m }
   templatePatch: |
+    {{- $workload := true }}
+    {{- if hasKey . "workload" }}{{ $workload = .workload }}{{ end }}
+    {{- if not (or $workload .build) }}{{ fail "deploy/meru.yaml: workload false needs build true - nothing would render" }}{{ end }}
     spec:
       sources:
+      {{- if $workload }}
         - repoURL: https://git.clockmost.com/Meru/nuwa.git
           targetRevision: {{ .chart | quote }}
           path: charts/nuwa-app
@@ -75,6 +81,7 @@ spec:
             releaseName: {{ .repository | quote }}
             valueFiles:
               - $app/deploy/values.yaml
+      {{- end }}
         - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
           targetRevision: {{ .branch | quote }}
           ref: app
