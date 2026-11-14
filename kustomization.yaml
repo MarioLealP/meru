@@ -48,6 +48,7 @@ resources:
   - projects/gitea.yaml
   - projects/openbao.yaml
   - projects/books.yaml
+  - projects/vector.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
