@@ -51,6 +51,7 @@ resources:
   - projects/vector.yaml
   - projects/openobserve-gate.yaml
   - projects/openobserve.yaml
+  - projects/authentik.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
