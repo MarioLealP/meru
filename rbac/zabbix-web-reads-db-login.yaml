@@ -1,0 +1,29 @@
+# The Zabbix web UI (Meru/zabbix-web, namespace zabbix-web) logs in to Meru/zabbix's database as its owner, as on
+# compose. The login is the Secret CNPG makes next to the Cluster (zabbix-db-app, namespace zabbix), and a pod can't
+# mount a Secret from another namespace - so ESO copies it into zabbix-web (Meru/zabbix-web deploy/database/login.yaml)
+# with zabbix-web's service account zabbix-db-login, which may get that one Secret and nothing else. No pod runs as
+# that account; no second password is minted or kept in OpenBao.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zabbix-web-reads-db-login
+  namespace: zabbix
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [zabbix-db-app]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zabbix-web-reads-db-login
+  namespace: zabbix
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zabbix-web-reads-db-login
+subjects:
+  - kind: ServiceAccount
+    name: zabbix-db-login
+    namespace: zabbix-web
