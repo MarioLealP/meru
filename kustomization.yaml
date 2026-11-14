@@ -50,6 +50,7 @@ resources:
   - projects/books.yaml
   - projects/vector.yaml
   - projects/openobserve-gate.yaml
+  - projects/openobserve.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
