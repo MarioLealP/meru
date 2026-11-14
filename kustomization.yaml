@@ -47,6 +47,7 @@ resources:
   - projects/headscale.yaml
   - projects/gitea.yaml
   - projects/openbao.yaml
+  - projects/books.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
