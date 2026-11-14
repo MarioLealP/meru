@@ -5,6 +5,9 @@
 # - get + list CronJobs: each one's last successful run (ops/zabbix/zbx29).
 # - list pods: containers stuck crash-looping or unable to pull their image (zbx34). A pod spec shows no secret values:
 #   Meru charts take them by reference.
+# - list pod metrics (metrics.k8s.io, metrics-server): which pod is eating CPU (ops/zabbix/zbx38, cm-x4ti - Kyverno's
+#   background controller spun ~8 cores for hours on 2026-11-13 behind a load alert that named nothing). Usage numbers
+#   only.
 # No Secrets, no logs, no watch, no writes. The two report ConfigMaps (Anubis, Charon) are their own Roles, in
 # rbac/anubis-findings.yaml and rbac/charon-sweep-report.yaml.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -16,6 +19,9 @@ rules:
     resources: [cronjobs]
     verbs: [get, list]
   - apiGroups: [""]
+    resources: [pods]
+    verbs: [list]
+  - apiGroups: [metrics.k8s.io]
     resources: [pods]
     verbs: [list]
 ---
