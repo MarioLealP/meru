@@ -41,6 +41,7 @@ resources:
   - projects/immich-ml.yaml
   - projects/immich.yaml
   - projects/zabbix-web.yaml
+  - projects/zabbix.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
