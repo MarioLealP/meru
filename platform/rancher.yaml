@@ -207,6 +207,9 @@ spec:
       labels:
         # Rancher runs as root (no securityContext in the chart): baseline, like the build namespaces.
         pod-security.kubernetes.io/enforce: baseline
+        # OpenBao's shared meru-eso login admits only namespaces labelled part-of=meru (D71).
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
     retry:
       limit: 10
       backoff: { duration: 30s, factor: 2, maxDuration: 10m }
