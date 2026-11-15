@@ -75,6 +75,7 @@ resources:
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml
+  - platform/rancher.yaml
   - platform/reloader.yaml
   - platform/temporal.yaml
   - platform/temporal-db.yaml
