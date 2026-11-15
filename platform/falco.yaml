@@ -111,11 +111,11 @@ spec:
               override:
                 condition: replace
 
-            # Controllers whose job is the API: Argo, Kyverno, CNPG, cert-manager, ESO, Sindri runners, CNPG instance managers,
+            # Controllers whose job is the API: Argo, CNPG, cert-manager, ESO, Sindri runners, CNPG instance managers,
             # and the Meru apps whose job is the API with their pod token (kubernetesApi: Heimdall, Shikigami, Charon, Anubis).
             - macro: user_known_contact_k8s_api_server_activities
               condition: >
-                (k8s.ns.name in (argocd, kyverno, cnpg-system, cert-manager, external-secrets))
+                (k8s.ns.name in (argocd, cnpg-system, cert-manager, external-secrets))
                 or (k8s.ns.name endswith "-build" and container.image.repository = "docker.io/gitea/runner")
                 or (container.image.repository = "ghcr.io/cloudnative-pg/postgresql" and proc.exepath = /controller/manager)
                 or (k8s.ns.name = heimdall and container.image.repository = "zot.clockmost.com/meru/heimdall")
@@ -180,8 +180,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-    # Falco runs privileged, so its namespace can't be "restricted" - a Kyverno exception allows it
-    # (Meru/kyverno: cluster/exceptions/falco.yaml).
+    # Falco runs privileged, so its namespace is Pod Security "privileged" (the only one).
     managedNamespaceMetadata:
       labels:
         pod-security.kubernetes.io/enforce: privileged

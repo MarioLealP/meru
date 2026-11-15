@@ -5,7 +5,6 @@
 # namespace <repo>, meru-apps.yaml) is the first environment and the one every build goes to.
 # The request is the gate: Shikigami widens the fence only for the environments the request names (checked by Xolotl),
 # so an envs/ folder nobody asked for generates an Application whose namespace the fence refuses - it deploys nothing.
-# Kyverno trusts the app's own signing key in <repo>-<env> (keys/meru-signing-keys.yaml, same step).
 # What the marker holds: owner and chart (as deploy/meru.yaml), optional database: "true" (quoted: the post selector compares strings) for meru-env-databases below.
 # Names: env-/envdb- can't meet app-<repo> (meru-apps) or each other - an environment's name has no hyphen, so
 # env-<repo>-<env> is never another repo's environment either. Deletes as meru-apps: the Application goes with its folder

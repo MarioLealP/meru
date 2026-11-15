@@ -75,9 +75,7 @@ resources:
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml
-  - platform/kyverno.yaml
-  - platform/kyverno-policies.yaml
-  - platform/meru-kyverno.yaml
+  - platform/reloader.yaml
   - platform/temporal.yaml
   - platform/temporal-db.yaml
   - platform/zot.yaml

@@ -5,7 +5,7 @@
 # - Secrets: its own namespace only (no cluster-wide Secret list)
 # - scale targets: Deployments and StatefulSets only - the chart's default `*/*` get (any object, Secrets
 #   included, by name) is for scaling custom resources, which we don't do
-# Kept, and accepted: Jobs create/delete cluster-wide (for ScaledJobs - Kyverno and each namespace's restricted
+# Kept, and accepted: Jobs create/delete cluster-wide (for ScaledJobs - each namespace's restricted
 # pod security still apply), and updating its own webhook + metrics APIService registration.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

@@ -6,8 +6,8 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 
 ## What's here
 
-- `projects/platform.yaml` - the platform's fence (an Argo CD AppProject): the parts this repo lists - Kyverno,
-  CNPG, Zot, ... - which install cluster-wide objects, so it is wide open.
+- `projects/platform.yaml` - the platform's fence (an Argo CD AppProject): the parts this repo lists - CNPG,
+  Zot, Reloader, ... - which install cluster-wide objects, so it is wide open.
 - `projects/<app>.yaml` - one fence per app, `meru-<app>`: its Application may read only the app's own repo plus the
   shared [Nüwa](https://git.clockmost.com/Meru/nuwa) and [Sindri](https://git.clockmost.com/Meru/sindri) charts,
   and deploy only into the app's two namespaces, `<app>` and `<app>-build`, which it may also create. An app's repo
@@ -29,9 +29,8 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 
 - `platform/<part>.yaml` - the platform's parts, one Argo CD Application each, all in the `platform` fence. An
   explicit list, never discovered: each part installs cluster-wide objects, so adding one is a reviewed change
-  here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence: Kyverno and its rules
-  ([Meru/kyverno](https://git.clockmost.com/Meru/kyverno)), CNPG, [Zot](https://git.clockmost.com/Meru/zot), Falco,
-  [Temporal](https://git.clockmost.com/Meru/temporal) and its database. Upstream charts come straight from their
+  here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence: CNPG, [Zot](https://git.clockmost.com/Meru/zot), Falco, Reloader (restarts a workload when
+  its Secret changes), [Temporal](https://git.clockmost.com/Meru/temporal) and its database. Upstream charts come straight from their
   publishers; everything of ours from a `Meru/` repo.
 
 ## Adding an app
@@ -40,7 +39,8 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 2. Add it to `kustomization.yaml`.
 3. `scripts/check.sh` - renders the repo, validates it, and fails if any app fence differs from that one shape.
 
-Its signing key and build exception go in [Meru/kyverno](https://git.clockmost.com/Meru/kyverno).
+Pod Security is Kubernetes' own: every app namespace is `restricted`, its build namespace `baseline` (rootless
+BuildKit), Falco's `privileged`. Kyverno was dropped 2026-11-15.
 
 ## License
 

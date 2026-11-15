@@ -11,7 +11,7 @@
 # and with it would reach the internal-frontend - admin, no token - and history/matching directly.
 # The web UI logs Mario in with that provider and passes his token on (D73, a WP-62 exception until 2027-04-30);
 # its client secret comes from OpenBao through ESO. Renewals: the server re-reads its files (refreshInterval);
-# the UI is rolled by Meru/kyverno's restart-on-secret-change (D72), for certificates and the secret alike.
+# the UI is rolled by Reloader (platform/reloader.yaml, D72), for certificates and the secret alike.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -204,9 +204,10 @@ spec:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 512Mi }
           # The server re-reads its certificate files (refreshInterval below), so a renewal needs no restart:
-          # Meru/kyverno's restart-on-secret-change skips these (D72). The UI can't, so it isn't annotated.
+          # Reloader skips these (D72). The UI can't, so it isn't annotated.
           deploymentAnnotations:
             meru.clockmost.com/reloads-secrets: "true"
+            reloader.stakater.com/auto: "false"
           # The frontend fetches Authentik's signing keys once at start and then only every refreshInterval - a
           # failed first fetch isn't retried sooner, and an unknown key ID doesn't trigger one. After the 2026-10-31
           # boot it started before Caddy listened and refused every token for an hour. So the frontend waits until
