@@ -1,0 +1,214 @@
+# Rancher: the cluster console (D130, workspace runbook clockmost-kubernetes.md) - logs, shells, restarts, a view of
+# everything - at https://rancher.clockmost.com, LAN + VPN only (host Caddy terminates TLS, no ingress here).
+# Argo CD stays the only deployer: nobody edits live objects in Rancher, and its Fleet GitOps menu is off.
+#
+# Login: Authentik's `rancher` OIDC client (Meru/authentik blueprints/rancher.yaml), clockmost-admins only (Mario).
+# Its client secret is Authentik's own, copied to OpenBao apps/meru/cattle-system/eso/rancher-oidc by
+# meru-oidc-secret.sh (admin session) and brought here by ESO; Rancher reads it as `cattle-system:rancher-oidc`.
+# The login gets the `clockmost-operator` role on the local cluster: read (no Secrets - their values would sit in
+# browser JS), pod logs + shell, delete pods, restart workloads. Nothing else.
+# Break-glass: Rancher's local `admin` (full rights). Its first password is the random one Rancher writes to
+# cattle-system/bootstrap-secret at first start (bootstrapPassword stays empty: nothing in git); changed on first
+# login, kept in KeePass.
+#
+# Rancher runs as root and spawns its own parts (Fleet, its webhook, Turtles/CAPI) into namespaces it makes itself
+# (cattle-*, fleet-*, local, p-*), images by tag - outside the house rules on purpose (D130). Its webhook guards
+# Pod Security labels on namespaces; Argo's controller has `*` and passes. Removal = rancher-cleanup (D130 notes),
+# etcd snapshot first. Measured ~2.1 GB RAM (2026-11-15 load test).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rancher
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: platform
+  source:
+    repoURL: https://releases.rancher.com/server-charts/stable
+    chart: rancher
+    targetRevision: 2.15.3 # latest (2026-10-29); supports k3s v1.36.5 (its default)
+    helm:
+      releaseName: rancher
+      valuesObject:
+        hostname: rancher.clockmost.com
+        ingress:
+          enabled: false # host Caddy routes to the rancher Service
+        tls: external
+        agentTLSMode: system-store # Caddy serves the public wildcard cert
+        replicas: 1
+        rancherImageTag: v2.15.3@sha256:3f3a50c6e49c1cf5b4673bef236e0f260f36055de4d073438e38c441dc97aa9b
+        resources:
+          requests: { cpu: 100m, memory: 1Gi }
+          limits: { memory: 2Gi }
+        # Fleet itself can't be turned off; this only drops gitjob + the Continuous Delivery menu (D130).
+        features: continuous-delivery=false
+        postDelete:
+          image:
+            tag: v0.8.3@sha256:abb0804d239cae9c137347b0c1175e745ab791d60023ae619f6aa6465fb2da7c
+        preUpgrade:
+          image:
+            tag: v0.8.3@sha256:abb0804d239cae9c137347b0c1175e745ab791d60023ae619f6aa6465fb2da7c
+        extraObjects:
+          # ESO logs in to OpenBao as `eso` (shared role meru-eso): reads apps/meru/cattle-system/eso/* only.
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: eso
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            automountServiceAccountToken: false
+          - apiVersion: external-secrets.io/v1
+            kind: SecretStore
+            metadata:
+              name: openbao
+              annotations: { argocd.argoproj.io/sync-wave: "-2" }
+            spec:
+              provider:
+                vault:
+                  server: https://openbao.clockmost.internal:8204
+                  path: apps
+                  version: v2
+                  # The clockmost root CA (public): OpenBao's listener certificate chains to it.
+                  caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ1RENDQVQrZ0F3SUJBZ0lVZGhFWDJENlFNdkFTQnRTRzBVbXZnNi84MmJVd0NnWUlLb1pJemowRUF3TXcKSERFYU1CZ0dBMVVFQXd3UlkyeHZZMnR0YjNOMElISnZiM1FnUTBFd0hoY05Nall4TURBMk1UVTFNakkwV2hjTgpNell4TURBek1UVTFNakkwV2pBY01Sb3dHQVlEVlFRRERCRmpiRzlqYTIxdmMzUWdjbTl2ZENCRFFUQjJNQkFHCkJ5cUdTTTQ5QWdFR0JTdUJCQUFpQTJJQUJOMnNSNEdubE1IN3ArcWczZ2NOUWRzckl5T0N6REpQZnBrRDRIL3EKd2VxWEdsWHNpaWJ6b2lhWDM4NTV4R3hOQkYxbkg5dlZGamhOelB0dmZEamhSZ1ZzTXNtVGw0cG9LSDBQMU5TcgphTFdkOUwwdmw0aHdSWStpNVVEYlBXZW01YU5DTUVBd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBT0JnTlZIUThCCkFmOEVCQU1DQVFZd0hRWURWUjBPQkJZRUZNVXdMRVE1RTdpMTQrUnNBUXU2eVNLNHpGeFVNQW9HQ0NxR1NNNDkKQkFNREEyY0FNR1FDTUNmamZKczd2RThFTyt2Q21UdzJsNFFGWXV2MVRIMVlVakZ3ZWRQcHZqa1R4ZTFqZ1lWVgpFRW15WHFQU29xQjNtZ0l3TWlQMC8xRzZYRlJ4TVQraEhqMTYrdU9qdjZsM25xUHVVV29tc09RYWtQRjVpNTFVCkF3cXZ6WmpmemxyNFdVOW8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+                  auth:
+                    kubernetes:
+                      mountPath: kubernetes
+                      role: meru-eso
+                      serviceAccountRef: { name: eso, audiences: [openbao] }
+          - apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: rancher-oidc
+              annotations: { argocd.argoproj.io/sync-wave: "-1" }
+            spec:
+              refreshInterval: 5m
+              secretStoreRef: { name: openbao, kind: SecretStore }
+              target: { name: rancher-oidc, creationPolicy: Owner }
+              dataFrom:
+                - extract: { key: meru/cattle-system/eso/rancher-oidc }
+          # Rancher's own objects: their CRDs exist only once Rancher has started, so they come last (wave 5, after
+          # the Deployment is healthy) and skip the dry run on the first sync.
+          - apiVersion: management.cattle.io/v3
+            kind: Setting
+            metadata:
+              name: server-url
+              annotations: &cattle
+                argocd.argoproj.io/sync-wave: "5"
+                argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+            value: https://rancher.clockmost.com
+          - apiVersion: management.cattle.io/v3
+            kind: Setting
+            metadata:
+              name: telemetry-opt
+              annotations: *cattle
+            value: out
+          # The login itself (what Rancher's UI "Auth Provider > Generic OIDC" would write). Only clockmost-admins
+          # may log in (accessMode restricted); the `groups` claim comes from Authentik's clockmost-scope-groups.
+          - apiVersion: management.cattle.io/v3
+            kind: AuthConfig
+            metadata:
+              name: genericoidc
+              annotations: *cattle
+            type: genericOIDCConfig
+            enabled: true
+            accessMode: restricted
+            allowedPrincipalIds:
+              - genericoidc_group://clockmost-admins
+            clientId: rancher
+            clientSecret: cattle-system:rancher-oidc
+            issuer: https://auth.clockmost.com/application/o/rancher/
+            rancherUrl: https://rancher.clockmost.com/verify-auth
+            scope: openid profile email groups
+            groupsClaim: groups
+            groupSearchEnabled: false
+          # Everyone who logs in is a plain Rancher user ...
+          - apiVersion: management.cattle.io/v3
+            kind: GlobalRoleBinding
+            metadata:
+              name: clockmost-admins-user
+              annotations: *cattle
+            globalRoleName: user-base
+            groupPrincipalName: genericoidc_group://clockmost-admins
+          # ... with this role on the local cluster (D130: read + restart + shell; Argo deploys, nobody edits live).
+          - apiVersion: management.cattle.io/v3
+            kind: RoleTemplate
+            metadata:
+              name: clockmost-operator
+              annotations: *cattle
+            displayName: clockmost operator
+            description: Read everything but Secrets, pod logs and shells, delete pods, restart workloads (D130).
+            context: cluster
+            rules:
+              - apiGroups: [""]
+                resources:
+                  - pods
+                  - pods/log
+                  - services
+                  - endpoints
+                  - configmaps
+                  - events
+                  - namespaces
+                  - nodes
+                  - persistentvolumes
+                  - persistentvolumeclaims
+                  - serviceaccounts
+                  - resourcequotas
+                  - limitranges
+                  - replicationcontrollers
+                verbs: [get, list, watch]
+              - apiGroups:
+                  - apps
+                  - batch
+                  - autoscaling
+                  - policy
+                  - networking.k8s.io
+                  - discovery.k8s.io
+                  - storage.k8s.io
+                  - events.k8s.io
+                  - metrics.k8s.io
+                  - rbac.authorization.k8s.io
+                  - apiextensions.k8s.io
+                  - argoproj.io
+                  - postgresql.cnpg.io
+                  - external-secrets.io
+                  - cert-manager.io
+                  - keda.sh
+                resources: ["*"]
+                verbs: [get, list, watch]
+              - apiGroups: [""]
+                resources: [pods/exec]
+                verbs: [create, get]
+              - apiGroups: [""]
+                resources: [pods]
+                verbs: [delete]
+              - apiGroups: [apps]
+                resources: [deployments, statefulsets, daemonsets]
+                verbs: [patch] # rollout restart
+          - apiVersion: management.cattle.io/v3
+            kind: ClusterRoleTemplateBinding
+            metadata:
+              name: clockmost-admins-operator
+              namespace: local
+              annotations: *cattle
+            clusterName: local
+            roleTemplateName: clockmost-operator
+            groupPrincipalName: genericoidc_group://clockmost-admins
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cattle-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    managedNamespaceMetadata:
+      labels:
+        # Rancher runs as root (no securityContext in the chart): baseline, like the build namespaces.
+        pod-security.kubernetes.io/enforce: baseline
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
+  # Rancher writes its own labels/annotations onto objects it manages; the AuthConfig/Settings carry fields Rancher
+  # fills in (status, default, creatorId) - SSA only claims what's listed above.
