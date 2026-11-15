@@ -254,10 +254,11 @@ spec:
           # Rancher projects = themes (Mario 2026-11-15: "just make part of the caas process, a theme field"). Rancher has
           # one level only, so a theme is a project and the app's namespaces sit in it side by side (immich, immich-build,
           # its environments). Which theme: the request's spec.theme, which Shikigami writes onto every one of the app's
-          # namespaces as the annotation meru.clockmost.com/theme (default unsorted). Platform parts (owner=platform, plus
-          # argocd/temporal/zot, which aren't labelled) -> platform. Anything else stays where Rancher puts it (System:
-          # cattle-*, fleet-*, kube-system). The sorter makes a theme's project the first time an app asks for it - no
-          # list to keep; an emptied project stays until someone deletes it.
+          # namespaces as the annotation meru.clockmost.com/theme (default unsorted); an app namespace without one ->
+          # unsorted. Rancher's and Kubernetes' own namespaces (kube-*, cattle-*, fleet-*, default, local*, Rancher's
+          # project/user ones p-*, u-*, user-*) stay where Rancher puts them; every other namespace is a platform part ->
+          # platform (the owner=platform label only lands on namespaces Argo creates, so it can't be the rule). The
+          # sorter makes a theme's project the first time one is asked for; an emptied project stays until deleted.
           - apiVersion: v1
             kind: ConfigMap
             metadata:
@@ -267,14 +268,15 @@ spec:
             data:
               sort.sh: |
                 set -eu
-                platform_extra=" argocd temporal zot "
-                kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.labels.meru\.clockmost\.com/app}{"|"}{.metadata.labels.meru\.clockmost\.com/owner}{"|"}{.metadata.annotations.meru\.clockmost\.com/theme}{"|"}{.metadata.annotations.field\.cattle\.io/projectId}{"\n"}{end}' |
-                while IFS='|' read -r ns app owner theme current; do
+                kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.labels.meru\.clockmost\.com/app}{"|"}{.metadata.annotations.meru\.clockmost\.com/theme}{"|"}{.metadata.annotations.field\.cattle\.io/projectId}{"\n"}{end}' |
+                while IFS='|' read -r ns app theme current; do
                   if [ -z "$theme" ]; then
-                    case "$platform_extra" in *" $ns "*) owner=platform ;; esac
-                    if [ "$owner" = platform ]; then theme=platform
-                    elif [ -n "$app" ]; then theme=unsorted
-                    else continue
+                    if [ -n "$app" ]; then theme=unsorted
+                    else
+                      case "$ns" in
+                        kube-* | cattle-* | fleet-* | cluster-fleet-* | default | local | local-* | p-* | u-* | user-*) continue ;;
+                      esac
+                      theme=platform
                     fi
                   fi
                   [ "$current" = "local:$theme" ] && continue
