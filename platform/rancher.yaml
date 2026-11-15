@@ -251,6 +251,114 @@ spec:
             clusterName: local
             roleTemplateName: clockmost-operator
             groupPrincipalName: genericoidc_group://clockmost-admins
+          # Rancher projects = themes (Mario 2026-11-15: "just make part of the caas process, a theme field"). Rancher has
+          # one level only, so a theme is a project and the app's namespaces sit in it side by side (immich, immich-build,
+          # its environments). Which theme: the request's spec.theme, which Shikigami writes onto every one of the app's
+          # namespaces as the annotation meru.clockmost.com/theme (default unsorted). Platform parts (owner=platform, plus
+          # argocd/temporal/zot, which aren't labelled) -> platform. Anything else stays where Rancher puts it (System:
+          # cattle-*, fleet-*, kube-system). The sorter makes a theme's project the first time an app asks for it - no
+          # list to keep; an emptied project stays until someone deletes it.
+          - apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: rancher-themes
+              annotations: &themes
+                argocd.argoproj.io/sync-wave: "6"
+            data:
+              sort.sh: |
+                set -eu
+                platform_extra=" argocd temporal zot "
+                kubectl get ns -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.labels.meru\.clockmost\.com/app}{"|"}{.metadata.labels.meru\.clockmost\.com/owner}{"|"}{.metadata.annotations.meru\.clockmost\.com/theme}{"|"}{.metadata.annotations.field\.cattle\.io/projectId}{"\n"}{end}' |
+                while IFS='|' read -r ns app owner theme current; do
+                  if [ -z "$theme" ]; then
+                    case "$platform_extra" in *" $ns "*) owner=platform ;; esac
+                    if [ "$owner" = platform ]; then theme=platform
+                    elif [ -n "$app" ]; then theme=unsorted
+                    else continue
+                    fi
+                  fi
+                  [ "$current" = "local:$theme" ] && continue
+                  if ! kubectl get projects.management.cattle.io -n local "$theme" >/dev/null 2>&1; then
+                    name=$(echo "$theme" | tr - ' ' | awk '{print toupper(substr($0, 1, 1)) substr($0, 2)}')
+                    printf '%s\n' "apiVersion: management.cattle.io/v3" "kind: Project" \
+                      "metadata: {name: $theme, namespace: local, annotations: {field.cattle.io/no-creator-rbac: 'true'}}" \
+                      "spec: {clusterName: local, displayName: '$name'}" | kubectl create -f - >/dev/null
+                    echo "project $theme ($name) made"
+                  fi
+                  kubectl annotate ns "$ns" "field.cattle.io/projectId=local:$theme" --overwrite >/dev/null
+                  echo "$ns -> $theme"
+                done
+          # The sorter: every 5 min, files namespaces into their theme's project. May read and annotate namespaces, and
+          # make and fill projects (manage-namespaces, checked by rancher-webhook) - nothing else. No resourceNames:
+          # themes come from requests, so the projects aren't known up front.
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: rancher-themes
+              annotations: *themes
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: ClusterRole
+            metadata:
+              name: rancher-themes
+              annotations: *themes
+            rules:
+              - apiGroups: [""]
+                resources: [namespaces]
+                verbs: [get, list, patch]
+              - apiGroups: [management.cattle.io]
+                resources: [projects]
+                verbs: [get, create, manage-namespaces]
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: ClusterRoleBinding
+            metadata:
+              name: rancher-themes
+              annotations: *themes
+            roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: rancher-themes }
+            subjects:
+              - { kind: ServiceAccount, name: rancher-themes, namespace: cattle-system }
+          - apiVersion: batch/v1
+            kind: CronJob
+            metadata:
+              name: rancher-themes
+              annotations: *themes
+            spec:
+              schedule: "*/5 * * * *"
+              concurrencyPolicy: Forbid
+              successfulJobsHistoryLimit: 1
+              failedJobsHistoryLimit: 1
+              jobTemplate:
+                spec:
+                  backoffLimit: 0
+                  activeDeadlineSeconds: 120
+                  ttlSecondsAfterFinished: 600
+                  template:
+                    metadata:
+                      labels:
+                        app.kubernetes.io/part-of: meru
+                        meru.clockmost.com/owner: platform
+                    spec:
+                      serviceAccountName: rancher-themes
+                      restartPolicy: Never
+                      securityContext:
+                        runAsNonRoot: true
+                        runAsUser: 1000
+                        seccompProfile: { type: RuntimeDefault }
+                      containers:
+                        - name: sort
+                          image: docker.io/rancher/shell:v0.8.3@sha256:abb0804d239cae9c137347b0c1175e745ab791d60023ae619f6aa6465fb2da7c
+                          command: [sh, /config/sort.sh]
+                          securityContext:
+                            allowPrivilegeEscalation: false
+                            readOnlyRootFilesystem: true
+                            capabilities: { drop: [ALL] }
+                          resources:
+                            requests: { cpu: 10m, memory: 32Mi }
+                            limits: { memory: 128Mi }
+                          volumeMounts:
+                            - { name: config, mountPath: /config }
+                      volumes:
+                        - name: config
+                          configMap: { name: rancher-themes }
   destination:
     server: https://kubernetes.default.svc
     namespace: cattle-system
