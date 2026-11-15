@@ -4,7 +4,8 @@
 #
 # Login: Authentik's `rancher` OIDC client (Meru/authentik blueprints/rancher.yaml), clockmost-admins only (Mario).
 # Its client secret is Authentik's own, copied to OpenBao apps/meru/cattle-system/eso/rancher-oidc by
-# meru-oidc-secret.sh (admin session) and brought here by ESO; Rancher reads it as `cattle-system:rancher-oidc`.
+# meru-oidc-secret.sh (admin session) and brought here by ESO; Rancher reads auth secrets only from its own cattle-global-data (any other `ns:name` is taken
+# as the literal secret), so a second ExternalSecret copies it there through a store that may read just that one Secret.
 # The login gets the `clockmost-operator` role on the local cluster: read (no Secrets - their values would sit in
 # browser JS), pod logs + shell, delete pods, restart workloads. Nothing else.
 # Break-glass: Rancher's local `admin` (full rights). Its first password is the random one Rancher writes to
@@ -86,6 +87,63 @@ spec:
               target: { name: rancher-oidc, creationPolicy: Owner }
               dataFrom:
                 - extract: { key: meru/cattle-system/eso/rancher-oidc }
+          # The copy into cattle-global-data (Rancher makes that namespace; wave 4, after Rancher is up). ESO's
+          # kubernetes provider, as `rancher-oidc-copier`: may get/list/watch the one Secret rancher-oidc in
+          # cattle-system and nothing else. No OpenBao login for cattle-global-data (it holds Rancher's other secrets).
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: rancher-oidc-copier
+              namespace: cattle-global-data
+              annotations: &copy
+                argocd.argoproj.io/sync-wave: "4"
+            automountServiceAccountToken: false
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: rancher-oidc-copier
+              annotations: *copy
+            rules:
+              - apiGroups: [""]
+                resources: [secrets]
+                resourceNames: [rancher-oidc]
+                verbs: [get, list, watch]
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: rancher-oidc-copier
+              annotations: *copy
+            roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: rancher-oidc-copier }
+            subjects:
+              - { kind: ServiceAccount, name: rancher-oidc-copier, namespace: cattle-global-data }
+          - apiVersion: external-secrets.io/v1
+            kind: SecretStore
+            metadata:
+              name: cattle-system
+              namespace: cattle-global-data
+              annotations: *copy
+            spec:
+              provider:
+                kubernetes:
+                  remoteNamespace: cattle-system
+                  server:
+                    url: https://kubernetes.default.svc
+                    caProvider: { type: ConfigMap, name: kube-root-ca.crt, key: ca.crt }
+                  auth:
+                    serviceAccount: { name: rancher-oidc-copier }
+          - apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: rancher-oidc
+              namespace: cattle-global-data
+              annotations:
+                argocd.argoproj.io/sync-wave: "5"
+            spec:
+              refreshInterval: 5m
+              secretStoreRef: { name: cattle-system, kind: SecretStore }
+              target: { name: rancher-oidc, creationPolicy: Owner }
+              dataFrom:
+                - extract: { key: rancher-oidc }
           # Rancher's own objects: their CRDs exist only once Rancher has started, so they come last (wave 5, after
           # the Deployment is healthy) and skip the dry run on the first sync.
           - apiVersion: management.cattle.io/v3
@@ -115,7 +173,7 @@ spec:
             allowedPrincipalIds:
               - genericoidc_group://clockmost-admins
             clientId: rancher
-            clientSecret: cattle-system:rancher-oidc
+            clientSecret: cattle-global-data:rancher-oidc
             issuer: https://auth.clockmost.com/application/o/rancher/
             rancherUrl: https://rancher.clockmost.com/verify-auth
             scope: openid profile email groups
