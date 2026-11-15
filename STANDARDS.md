@@ -93,7 +93,7 @@ Every app is laid out the same way, by layer, so anyone can find a thing without
 
 - **`scripts/check.sh` runs every CI step**, and passes before a PR. *checked*
 - **Conventional Commits** for commits and PR titles. *review*
-- **Containers** run as a non-root user with a digest-pinned base. *checked by Kyverno*
+- **Containers** run as a non-root user with a digest-pinned base. *checked by Pod Security (restricted)*
 - **Before pinning a version**, check the real latest release and its advisories. *review*
 - **Shared code** lives in one Meru repo that holds actual code only, used as a git submodule pinned per app. Settings
   and project files stay in each app. It holds what is truly the same, and the third copy of the same logic moves

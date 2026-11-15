@@ -1,4 +1,4 @@
-# The platform's fence: the parts this repo lists (Kyverno, CNPG, Zot, ...). They install cluster-wide objects (CRDs,
+# The platform's fence: the parts this repo lists (CNPG, Zot, Falco, ...). They install cluster-wide objects (CRDs,
 # webhooks, cluster roles), so it is wide open; only this repo, which the platform owner merges, puts anything in it.
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
@@ -15,7 +15,7 @@ spec:
     - https://falcosecurity.github.io/charts
     - https://go.temporal.io/helm-charts
     - https://kedacore.github.io/charts
-    - https://kyverno.github.io/kyverno
+    - https://stakater.github.io/stakater-charts
   destinations:
     - server: https://kubernetes.default.svc
       namespace: "*"

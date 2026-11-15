@@ -1,0 +1,61 @@
+# Reloader: rolls a workload when a Secret it uses changes (ESO rotated a value, cert-manager renewed a certificate),
+# so apps that don't re-read their files pick the new value up by a normal rolling restart (D72). Replaced Kyverno's
+# restart-on-secret-change when Kyverno was dropped (2026-11-15, Mario: "We can drop it"). Same reach as that rule:
+# Meru namespaces only, Secrets only (ConfigMaps come from git and roll with their own sync), not Jobs/CronJobs.
+# An app that re-reads its secret files itself opts out with reloader.stakater.com/auto: "false" (nuwa-app 0.31.0+
+# sets it from reloadsSecrets). Apps on an older chart that set reloadsSecrets are listed by namespace in
+# ignoreNamespaces until they move to 0.31.0+: drive-rag, felt-core (2-hour certificates: it would roll every
+# renewal), warpgate (a restart drops open sessions).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reloader
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://stakater.github.io/stakater-charts
+    chart: reloader
+    targetRevision: 2.2.20 # Reloader v1.4.24, the latest (2026-11-11); no published advisories
+    helm:
+      releaseName: reloader
+      valuesObject:
+        image:
+          tag: v1.4.24@sha256:3ab43d3eb96c59798644bf826b0444a846c0197d22ab4b6c101c4da3e1d6ef23
+        reloader:
+          autoReloadAll: true
+          reloadStrategy: annotations # a pod-template annotation: Argo's diff leaves it alone, as it did Kyverno's
+          ignoreConfigMaps: true
+          ignoreJobs: true
+          ignoreCronJobs: true
+          watchGlobally: true
+          namespaceSelector: app.kubernetes.io/part-of=meru
+          ignoreNamespaces: drive-rag,felt-core,warpgate
+          readOnlyRootFileSystem: true
+          deployment:
+            labels:
+              meru.clockmost.com/owner: platform
+            containerSecurityContext:
+              allowPrivilegeEscalation: false
+              capabilities: { drop: [ALL] }
+            # No CPU limit (it throttles on an idle machine).
+            resources:
+              requests: { cpu: 10m, memory: 32Mi }
+              limits: { memory: 128Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: reloader
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

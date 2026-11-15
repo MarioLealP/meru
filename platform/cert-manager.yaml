@@ -1,7 +1,7 @@
 # cert-manager: issues and renews the in-cluster TLS certificates (D71). It holds no OpenBao login of its own: each
 # app namespace's Issuer points it at OpenBao's pki_meru with that namespace's `certs` account, and OpenBao only signs
 # names under <ns>.svc. No ACME, no cluster-wide issuer. Wave 1: after the rules. The controller has no readiness
-# probe and the cainjector no probes at all in the chart - Meru/kyverno's cert-manager exception says why.
+# probe and the cainjector no probes at all in the chart (accepted: the chart's own choice).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

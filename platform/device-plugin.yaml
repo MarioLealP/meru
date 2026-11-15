@@ -1,7 +1,7 @@
 # The node's device plugin (wave F, 2026-11-13): hands single host devices to pods as extended resources, so a pod
 # that needs one (the Ender's USB serial) stays Pod Security "restricted" - no hostPath, no privileged. Plain
 # manifests in platform/device-plugin/ (squat/generic-device-plugin, pinned by digest; the upstream chart has no Helm
-# repo). kube-system is where node plugins live and is already outside Kyverno's webhooks (platform/kyverno.yaml).
+# repo). kube-system is where node plugins live (not a Meru namespace).
 # New host power: reads the host's /dev and owns a socket in the kubelet's device-plugins dir - Mario reviews.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
