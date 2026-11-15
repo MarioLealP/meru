@@ -49,7 +49,6 @@ resources:
   - projects/openbao.yaml
   - projects/books.yaml
   - projects/vector.yaml
-  - projects/openobserve-gate.yaml
   - projects/openobserve.yaml
   - projects/authentik.yaml
   - appsets/meru-apps.yaml
