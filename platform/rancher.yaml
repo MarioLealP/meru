@@ -14,7 +14,7 @@
 #
 # Rancher runs as root and spawns its own parts (Fleet, its webhook, Turtles/CAPI) into namespaces it makes itself
 # (cattle-*, fleet-*, local, p-*), images by tag - outside the house rules on purpose (D130). Its webhook guards
-# Pod Security labels on namespaces; Argo's controller has `*` and passes. Removal = rancher-cleanup (D130 notes),
+# Pod Security labels on namespaces; Argo's controller has `*` and passes. cattle-system is privileged (below). Removal = rancher-cleanup (D130 notes),
 # etcd snapshot first. Measured ~2.1 GB RAM (2026-11-15 load test).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -263,8 +263,11 @@ spec:
       - ServerSideApply=true
     managedNamespaceMetadata:
       labels:
-        # Rancher runs as root (no securityContext in the chart): baseline, like the build namespaces.
-        pod-security.kubernetes.io/enforce: baseline
+        # privileged: Rancher runs as root, and the system-upgrade-controller it installs here mounts host paths
+        # (/etc/ssl, /etc/pki). Under baseline that pod never started and Rancher retried the install every few
+        # seconds, leaving a failed pod each time - 61 of them filled the node's 200-pod limit (2026-11-15).
+        # Nothing new for Rancher: it already holds cluster-admin.
+        pod-security.kubernetes.io/enforce: privileged
         # OpenBao's shared meru-eso login admits only namespaces labelled part-of=meru (D71).
         app.kubernetes.io/part-of: meru
         meru.clockmost.com/owner: platform
