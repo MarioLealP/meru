@@ -1,11 +1,11 @@
-# Argo reads private Meru repos (cm-8ope, D48): one read-only Gitea bot, `argocd-reader` (Read team over every Meru
+# Argo reads private Meru repos: one read-only Gitea bot, `argocd-reader` (Read team over every Meru
 # repo, token scopes read:repository + read:organization), made by clockmost-infra's
 # projects/openbao/admin/meru-argocd-identities.sh, its token in OpenBao at apps/meru/argocd/eso/gitea. ESO turns it
 # into two Secrets here; nobody types or stores the token anywhere else.
 # - meru-repo-creds: a credential template - every repo URL under https://git.clockmost.com/Meru/ (the apps, the
 #   nuwa chart, this repo) is fetched with it. Public repos read the same as before; private ones now read too.
 # - meru-gitea-scm: the token the app scans (appsets/) ask Gitea with, so private repos show up in the list. Without
-#   it a repo that goes private drops out of the scan and its Application is deleted (D86).
+#   it a repo that goes private drops out of the scan and its Application is deleted.
 # If the token stops working Gitea refuses every fetch, public ones included: fix the token (re-run the script with
 # ROTATE_GITEA_TOKEN=1), or delete meru-repo-creds by hand to fall back to anonymous reads.
 apiVersion: v1

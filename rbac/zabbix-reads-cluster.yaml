@@ -1,13 +1,12 @@
-# Zabbix's read of the cluster (D108), for the server as a Meru app (Meru/zabbix, namespace zabbix), on the app's own
-# service account (compose's zabbix-reader token went with compose's Zabbix, 2026-11-14). It calls the API through a
+# Zabbix's read of the cluster, for the server as a Meru app (Meru/zabbix, namespace zabbix), on the app's own
+# service account. It calls the API through a
 # kubectl-proxy sidecar on its pod's projected token (10 minutes, renewed by the kubelet) - no long-lived token Secret,
 # nothing copied into a Zabbix macro.
 # - get + list CronJobs: each one's last successful run (ops/zabbix/zbx29).
 # - list pods: containers stuck crash-looping or unable to pull their image (zbx34). A pod spec shows no secret values:
 #   Meru charts take them by reference.
-# - list pod metrics (metrics.k8s.io, metrics-server): which pod is eating CPU (ops/zabbix/zbx38, cm-x4ti - Kyverno's
-#   background controller spun ~8 cores for hours on 2026-11-13 behind a load alert that named nothing). Usage numbers
-#   only.
+# - list pod metrics (metrics.k8s.io, metrics-server): which pod is eating CPU (ops/zabbix/zbx38), so a load
+#   alert names its cause. Usage numbers only.
 # - get the ClusterScan meru-weekly (platform/compliance/scans.yaml): its summary, the failed-check count of the last
 #   weekly compliance scan (ops/zabbix/zbx41-rancher-compliance.py). Counts and timestamps only; the per-check report
 #   (ClusterScanReport) isn't readable.

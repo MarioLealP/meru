@@ -1,6 +1,5 @@
 # Reloader: rolls a workload when a Secret it uses changes (ESO rotated a value, cert-manager renewed a certificate),
-# so apps that don't re-read their files pick the new value up by a normal rolling restart (D72). Replaced Kyverno's
-# restart-on-secret-change when Kyverno was dropped (2026-11-15, Mario: "We can drop it"). Same reach as that rule:
+# so apps that don't re-read their files pick the new value up by a normal rolling restart. Reach:
 # Meru namespaces only, Secrets only (ConfigMaps come from git and roll with their own sync), not Jobs/CronJobs.
 # An app that re-reads its secret files itself opts out with reloader.stakater.com/auto: "false" (nuwa-app 0.31.0+
 # sets it from reloadsSecrets). Apps on an older chart that set reloadsSecrets are listed by namespace in
@@ -18,7 +17,7 @@ spec:
   source:
     repoURL: https://stakater.github.io/stakater-charts
     chart: reloader
-    targetRevision: 2.2.20 # Reloader v1.4.24, the latest (2026-11-11); no published advisories
+    targetRevision: 2.2.20 # Reloader v1.4.24
     helm:
       releaseName: reloader
       valuesObject:
@@ -26,7 +25,7 @@ spec:
           tag: v1.4.24@sha256:3ab43d3eb96c59798644bf826b0444a846c0197d22ab4b6c101c4da3e1d6ef23
         reloader:
           autoReloadAll: true
-          reloadStrategy: annotations # a pod-template annotation: Argo's diff leaves it alone, as it did Kyverno's
+          reloadStrategy: annotations # a pod-template annotation: Argo's diff leaves it alone
           ignoreConfigMaps: true
           ignoreJobs: true
           ignoreCronJobs: true

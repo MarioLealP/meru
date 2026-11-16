@@ -1,4 +1,4 @@
-# Anubis's findings (D114, D115): each run writes what is stuck in Thoth into the ConfigMap anubis-findings in its own
+# Anubis's findings: each run writes what is stuck in Thoth into the ConfigMap anubis-findings in its own
 # namespace, and Zabbix (Meru/zabbix, through its kubectl-proxy sidecar) reads that one object. Anubis may create ConfigMaps only in its namespace (create can't be narrowed to a name)
 # and change only that one; Zabbix may read only that one.
 apiVersion: rbac.authorization.k8s.io/v1

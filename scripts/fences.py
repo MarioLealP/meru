@@ -19,7 +19,7 @@ KINDS = yaml.safe_load(Path(__file__).resolve().parent.parent.joinpath("projects
 ]
 
 
-ENVIRONMENT = re.compile(r"^[a-z][a-z0-9]{0,7}$")  # Shikigami's request format: an environment's name (D126)
+ENVIRONMENT = re.compile(r"^[a-z][a-z0-9]{0,7}$")  # Shikigami's request format: an environment's name
 
 
 def problems(project: dict) -> list[str]:

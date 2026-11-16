@@ -1,4 +1,4 @@
-# Finds Meru apps' further environments (D126): every deploy/envs/<env>/meru.yaml in a Meru repo with deploy/meru.yaml
+# Finds Meru apps' further environments: every deploy/envs/<env>/meru.yaml in a Meru repo with deploy/meru.yaml
 # gets one Application, env-<repo>-<env>, into namespace <repo>-<env>, in the app's own fence meru-<repo>. It renders
 # the nuwa-app chart from deploy/envs/<env>/values.yaml and never builds: an environment runs the image the app's own
 # builds made, pinned by digest - promoting is a PR that copies a tested digest into that file. The app itself (app-<repo>,
@@ -32,7 +32,7 @@ spec:
                 excludeArchivedRepos: true
               filters:
                 - pathsExist: [deploy/meru.yaml]
-              requeueAfterSeconds: 900 # 15 min (was 180: 4 scans of every repo kept SQLite Gitea busy, 2026-11-14)
+              requeueAfterSeconds: 900 # 15 min: shorter scans of every repo keep the SQLite Gitea busy
           - git:
               repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
               revision: "{{ .branch }}"
@@ -78,7 +78,7 @@ spec:
           targetRevision: {{ .branch | quote }}
           ref: app
 ---
-# An environment's database (D126): a marker with database: "true" gets envdb-<repo>-<env> from
+# An environment's database: a marker with database: "true" gets envdb-<repo>-<env> from
 # deploy/envs/<env>/database/, into the environment's namespace - as meru-databases.yaml does for the app itself: its own
 # Application so no app deploy can touch the data, never pruned, the Cluster carries Prune=false,Delete=false.
 apiVersion: argoproj.io/v1alpha1
@@ -102,7 +102,7 @@ spec:
                 tokenRef: { secretName: meru-gitea-scm, key: token } # private repos too (argocd/gitea-reader.yaml)
               filters:
                 - pathsExist: [deploy/meru.yaml]
-              requeueAfterSeconds: 900 # 15 min (was 180: 4 scans of every repo kept SQLite Gitea busy, 2026-11-14)
+              requeueAfterSeconds: 900 # 15 min: shorter scans of every repo keep the SQLite Gitea busy
           - git:
               repoURL: "https://git.clockmost.com/Meru/{{ .repository }}.git"
               revision: "{{ .branch }}"

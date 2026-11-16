@@ -1,5 +1,5 @@
-# Heimdall may list what runs in the cluster (D100/D101): every namespace (Meru apps are the labelled ones) and every
-# Deployment, StatefulSet, DaemonSet and CronJob (D117: a CronJob app - Charon, Anubis - has no Deployment), which it
+# Heimdall may list what runs in the cluster: every namespace (Meru apps are the labelled ones) and every
+# Deployment, StatefulSet, DaemonSet and CronJob (a CronJob app - Charon, Anubis - has no Deployment), which it
 # reports to Thoth as k8s-scan@clockmost every 5 minutes. List only: no get, no watch, no writes, and nothing that
 # holds values - no Secrets, ConfigMaps or pods. Cluster-wide on purpose: a scan is a snapshot of the whole cluster,
 # platform included.

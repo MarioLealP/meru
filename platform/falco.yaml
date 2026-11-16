@@ -51,8 +51,8 @@ spec:
           volumeMounts:
             - name: events
               mountPath: /var/log/falco
-        # Falco asks Docker for container names once, at start. At boot k3s is up before Docker answers, so Falco came up
-        # blind to the compose stacks (10-31 and 11-03, cm-xfav). Wait for Docker's _ping, at most 3 minutes, then
+        # Falco asks Docker for container names once, at start. At boot k3s is up before Docker answers, so Falco could come up
+        # blind to the compose stacks. Wait for Docker's _ping, at most 3 minutes, then
         # start anyway so the k3s pods stay watched if Docker is gone.
         extra:
           initContainers:

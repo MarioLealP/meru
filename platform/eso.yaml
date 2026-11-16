@@ -1,5 +1,5 @@
 # External Secrets Operator: turns an ExternalSecret placeholder in an app's repo into a real Secret, read from
-# OpenBao with that namespace's own login (D66). Shikigami writes the values to OpenBao, never to the cluster.
+# OpenBao with that namespace's own login. Shikigami writes the values to OpenBao, never to the cluster.
 # Only the namespaced kinds run: no ClusterSecretStore (one store every namespace could read through), no
 # ClusterExternalSecret, no PushSecret (cluster -> OpenBao) and no ClusterGenerator. Wave 1: after the rules.
 apiVersion: argoproj.io/v1alpha1

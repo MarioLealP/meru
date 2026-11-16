@@ -1,4 +1,4 @@
-# Meru
+# Meru - the home lab's container platform
 
 The root of **Meru**, a small in-house container platform (CaaS) on k3s. Argo CD applies this repo to the cluster's
 `argocd` namespace; everything else in Meru hangs off it. Changes go in through pull requests that the platform
@@ -40,7 +40,30 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 3. `scripts/check.sh` - renders the repo, validates it, and fails if any app fence differs from that one shape.
 
 Pod Security is Kubernetes' own: every app namespace is `restricted`, its build namespace `baseline` (rootless
-BuildKit), Falco's `privileged`. Kyverno was dropped 2026-11-15.
+BuildKit), Falco's `privileged`. CI signs every image with cosign, but nothing checks those signatures when a pod
+starts yet.
+
+## Names
+
+Meru's parts carry mythology names; this is what each one does.
+
+| name | role |
+|---|---|
+| Meru | the platform as a whole; this repo is its root (Argo CD fences, app discovery, platform parts) |
+| Nüwa | app templates: the `nuwa-app` Helm chart every app deploys with, plus the new-repo templates (`nuwa-python`, `nuwa-static`, `nuwa-upstream`, `nuwa-binary`) |
+| Sindri | app builds: the `sindri-build` chart - each app's build namespace and Gitea runner |
+| Shikigami | orchestrator: turns an approved app request into a running app (repo, fence, keys, deploy), and retires it |
+| Janus | request intake: takes app requests from the atlas and agents, hands approvals to Xolotl |
+| Xolotl | merger: checks and merges Shikigami's trust PRs and approved requests |
+| Thoth | CMDB: what exists, how it connects, how it got that way |
+| Heimdall | scanner: tells Thoth what really runs in the cluster |
+| Anubis | stuck-app reports: finds what is stuck in Thoth, reports it to Zabbix |
+| Charon | retired-app cleanup: purges a retired app's namespaces, volumes and secrets after retention |
+| Golem | test app: every onboarding step runs on it first |
+| Homunculus | test app: hands-off onboarding and retirement |
+| Kitsune | test app: approval through the atlas |
+| Tanuki | test app: typed and generated secrets |
+| Zot, Temporal | the image registry and the workflow engine (their own names) |
 
 ## License
 

@@ -1,4 +1,4 @@
-# cert-manager: issues and renews the in-cluster TLS certificates (D71). It holds no OpenBao login of its own: each
+# cert-manager: issues and renews the in-cluster TLS certificates. It holds no OpenBao login of its own: each
 # app namespace's Issuer points it at OpenBao's pki_meru with that namespace's `certs` account, and OpenBao only signs
 # names under <ns>.svc. No ACME, no cluster-wide issuer. Wave 1: after the rules. The controller has no readiness
 # probe and the cainjector no probes at all in the chart (accepted: the chart's own choice).
@@ -14,14 +14,14 @@ spec:
   source:
     repoURL: https://charts.jetstack.io
     chart: cert-manager
-    targetRevision: v1.21.3 # latest (2026-10-23); GHSA-8rvj-mm4h-c258 fixed since 1.20.3
+    targetRevision: v1.21.3 # GHSA-8rvj-mm4h-c258 is fixed from 1.20.3
     helm:
       releaseName: cert-manager
       valuesObject:
         crds:
           enabled: true
           keep: true # deleting the app never deletes every Certificate in the cluster
-        enableCertificateOwnerRef: true # a deleted Certificate takes its Secret with it, like ESO's Owner (D68)
+        enableCertificateOwnerRef: true # a deleted Certificate takes its Secret with it, like ESO's Owner
         podLabels: &labels
           app.kubernetes.io/part-of: meru
           meru.clockmost.com/owner: platform

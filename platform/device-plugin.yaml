@@ -1,4 +1,4 @@
-# The node's device plugin (wave F, 2026-11-13): hands single host devices to pods as extended resources, so a pod
+# The node's device plugin: hands single host devices to pods as extended resources, so a pod
 # that needs one (the Ender's USB serial) stays Pod Security "restricted" - no hostPath, no privileged. Plain
 # manifests in platform/device-plugin/ (squat/generic-device-plugin, pinned by digest; the upstream chart has no Helm
 # repo). kube-system is where node plugins live (not a Meru namespace).

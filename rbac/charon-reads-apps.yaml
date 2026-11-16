@@ -1,4 +1,4 @@
-# Charon reads a retired app's Argo Application before deleting its namespace (D109): one that still exists means the
+# Charon reads a retired app's Argo Application before deleting its namespace: one that still exists means the
 # app is back or not finished stopping, and the namespace stays. Read only, in argocd alone.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role

@@ -1,4 +1,4 @@
-# Shikigami may read Argo CD Applications (D85): its retire pass waits until Argo has applied an app's stop commit
+# Shikigami may read Argo CD Applications: its retire pass waits until Argo has applied an app's stop commit
 # (synced, no workload left) before it parks the marker - with preserveResourcesOnDeletion, an Application removed
 # before that would leave its pods running with nothing to stop them. Read only: get, no list/watch, no writes.
 # Applications hold what's already in the public Meru repos (sources, sync status), no secrets.
