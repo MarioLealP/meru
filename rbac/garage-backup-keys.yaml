@@ -1,0 +1,218 @@
+# Backup keys between Meru/garage (the S3 store for Postgres' WAL archive and base backups) and the databases.
+# Garage's provisioner sidecar makes one key per database namespace and keeps it in Secret s3-<namespace> in its own
+# namespace; each database's ESO copies its one Secret into the database's namespace with that namespace's service
+# account backup-key (no pod runs as it). Nobody makes or copies a key by hand. A new database: a line in CONSUMERS
+# (Meru/garage deploy/values.yaml) and a Role + RoleBinding pair below.
+#
+# The provisioner: create Secrets here (Kubernetes can't limit create by name), read and update only the s3-* ones.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: garage-writes-backup-keys
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-authentik, s3-glitchtip, s3-immich, s3-nova-lemuria, s3-nova-lemuria-uat, s3-nova-lemuria-prod, s3-thoth, s3-zabbix, s3-temporal]
+    verbs: [get, update]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: garage-writes-backup-keys
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: garage-writes-backup-keys }
+subjects:
+  - { kind: ServiceAccount, name: garage, namespace: garage }
+---
+# authentik: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: authentik-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-authentik]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: authentik-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: authentik-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: authentik }
+---
+# glitchtip: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: glitchtip-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-glitchtip]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: glitchtip-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: glitchtip-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: glitchtip }
+---
+# immich: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: immich-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-immich]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: immich-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: immich-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: immich }
+---
+# nova-lemuria: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nova-lemuria-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-nova-lemuria]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nova-lemuria-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: nova-lemuria-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: nova-lemuria }
+---
+# nova-lemuria-uat: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nova-lemuria-uat-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-nova-lemuria-uat]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nova-lemuria-uat-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: nova-lemuria-uat-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: nova-lemuria-uat }
+---
+# nova-lemuria-prod: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nova-lemuria-prod-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-nova-lemuria-prod]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nova-lemuria-prod-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: nova-lemuria-prod-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: nova-lemuria-prod }
+---
+# thoth: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: thoth-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-thoth]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: thoth-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: thoth-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: thoth }
+---
+# zabbix: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zabbix-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-zabbix]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zabbix-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: zabbix-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: zabbix }
+---
+# temporal: its own key, nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: temporal-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-temporal]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: temporal-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: temporal-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: temporal }
