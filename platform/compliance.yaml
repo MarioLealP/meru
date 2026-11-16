@@ -1,0 +1,61 @@
+# Rancher's compliance scans (rancher-compliance, Rancher's kube-bench based CIS scanner): the operator, its CRDs and
+# the scans it runs (platform/compliance/). It checks the node and the cluster against the k3s CIS benchmark and
+# writes a report per run; Rancher's UI shows them under Compliance, Zabbix reads the weekly scan's failed-check count
+# (clockmost-infra ops/zabbix/zbx41-rancher-compliance.py, through rbac/zabbix-reads-cluster.yaml).
+# The scan pods read the host (hostPID, host paths), so the namespace is privileged; the operator holds a cluster
+# role that reads everything (Rancher's own). Upstream charts from charts.rancher.io, the release line for Rancher 2.15.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: compliance
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3" # after Rancher (2)
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.rancher.io
+      chart: rancher-compliance-crd
+      targetRevision: 110.3.0+up1.5.4 # the latest for Rancher 2.15 (2026-10-26)
+      helm:
+        releaseName: rancher-compliance-crd
+    - repoURL: https://charts.rancher.io
+      chart: rancher-compliance
+      targetRevision: 110.3.0+up1.5.4 # compliance-operator v1.5.4, k3s profiles up to k3s-cis-2.0
+      helm:
+        releaseName: rancher-compliance
+        valuesObject:
+          image:
+            operator:
+              tag: v1.5.4@sha256:2ba92c7033b674fdcee807491dc22e4834a6d121944b4826ff4180c8431b5b78
+            securityScan:
+              tag: v0.10.4@sha256:9af5e01b6b3c8e51fa38fb1136f944c83662a765dcbdeec4c2facc6ac109dcdb
+            # sonobuoy stays on its tag: the operator also passes the tag on as sonobuoy's version string.
+          global:
+            kubectl:
+              tag: v8.1.2@sha256:64994ba062b10a732955d6f58d7a21a3f0fbf674bfc8f7aef4d1ef3f6354a109
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 256Mi }
+    - repoURL: https://git.clockmost.com/Meru/meru.git
+      targetRevision: main
+      path: platform/compliance
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: compliance-operator-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # the operator writes status and defaults into the scans
+      - SkipDryRunOnMissingResource=true # the scans' kind comes with the CRD chart in the same sync
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged # the scan pods read the host
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

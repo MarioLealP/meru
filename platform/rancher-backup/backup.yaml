@@ -1,0 +1,10 @@
+# Rancher's state every day at 13:00 UTC (daytime: the server may be off at night), the last 14 kept, on the
+# operator's volume. A restore is a Restore object naming one of the files - see Rancher's backup docs.
+apiVersion: resources.cattle.io/v1
+kind: Backup
+metadata:
+  name: rancher-daily
+spec:
+  resourceSetName: rancher-resource-set-basic
+  schedule: "0 13 * * *"
+  retentionCount: 14

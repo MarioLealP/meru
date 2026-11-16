@@ -1,0 +1,60 @@
+# Rancher's own backup (rancher-backup, the backup-restore operator): Rancher's state - its settings, auth config,
+# roles, projects - as a tarball, so Rancher can be restored onto a rebuilt cluster with Rancher's Restore. The basic
+# resource set, which leaves Secrets out (Rancher's OIDC secret comes from OpenBao anyway), so the tarballs need no
+# encryption key. Kept on a `local` volume (/home/k8s/volumes/cattle-resources-system/..., in restic's precious tier
+# and so offsite); moves to the S3 object store once the audit's backup phase (P4) builds it.
+# The operator binds cluster-admin (it restores anything it backed up) - the same reach Rancher already has.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rancher-backup
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3" # after Rancher (2)
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.rancher.io
+      chart: rancher-backup-crd
+      targetRevision: 110.0.3+up11.0.4 # the latest for Rancher 2.15 (2026-10-26)
+      helm:
+        releaseName: rancher-backup-crd
+    - repoURL: https://charts.rancher.io
+      chart: rancher-backup
+      targetRevision: 110.0.3+up11.0.4 # backup-restore-operator v11.0.4
+      helm:
+        releaseName: rancher-backup
+        valuesObject:
+          image:
+            tag: v11.0.4@sha256:02443085d084dc2db8f91705447024fbf791b3aac0bfb2b10c1eb79430d93b8c
+          imagePullPolicy: IfNotPresent
+          global:
+            kubectl:
+              tag: v8.1.2@sha256:64994ba062b10a732955d6f58d7a21a3f0fbf674bfc8f7aef4d1ef3f6354a109
+          persistence:
+            enabled: true
+            storageClass: local
+            size: 2Gi
+    - repoURL: https://git.clockmost.com/Meru/meru.git
+      targetRevision: main
+      path: platform/rancher-backup
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cattle-resources-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # the operator writes status into the Backup
+      - SkipDryRunOnMissingResource=true # the Backup's kind comes with the CRD chart in the same sync
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: baseline # the operator and its hook Job set no seccomp profile
+        pod-security.kubernetes.io/warn: restricted
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
