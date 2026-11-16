@@ -55,6 +55,7 @@ resources:
   - projects/garage.yaml
   - projects/meru-release.yaml
   - projects/nextcloud.yaml
+  - projects/onlyoffice.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
