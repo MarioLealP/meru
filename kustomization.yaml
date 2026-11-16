@@ -52,6 +52,7 @@ resources:
   - projects/openobserve.yaml
   - projects/authentik.yaml
   - projects/agents.yaml
+  - projects/garage.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml
