@@ -88,7 +88,7 @@ spec:
         # Meru's baseline for the namespace (Meru/nuwa charts/meru-baseline): closed-by-default network policies,
         # pinned here by the platform - the app's repo can't change or turn them off.
         - repoURL: https://git.clockmost.com/Meru/nuwa.git
-          targetRevision: meru-baseline-0.1.0
+          targetRevision: meru-baseline-0.2.0
           path: charts/meru-baseline
           helm:
             releaseName: {{ printf "%s-baseline" .repository | quote }}

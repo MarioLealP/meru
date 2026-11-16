@@ -79,7 +79,7 @@ spec:
           ref: app
         # Meru's baseline for the environment's namespace, as for the app's own (meru-apps.yaml).
         - repoURL: https://git.clockmost.com/Meru/nuwa.git
-          targetRevision: meru-baseline-0.1.0
+          targetRevision: meru-baseline-0.2.0
           path: charts/meru-baseline
           helm:
             releaseName: {{ printf "%s-%s-baseline" .repository (index .path.segments 2) | quote }}
