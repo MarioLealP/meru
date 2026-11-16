@@ -7,6 +7,8 @@
 #   Meru charts take them by reference.
 # - list pod metrics (metrics.k8s.io, metrics-server): which pod is eating CPU (ops/zabbix/zbx38), so a load
 #   alert names its cause. Usage numbers only.
+# - list Certificates (cert-manager.io): expiry + Ready of every cert, so a failing renewal alerts hours before notAfter
+#   (ops/zabbix/zbx42-k3s-cert-health.py). Names, dates and conditions only - no key material lives on the object.
 # - get the ClusterScan meru-weekly (platform/compliance/scans.yaml): its summary, the failed-check count of the last
 #   weekly compliance scan (ops/zabbix/zbx41-rancher-compliance.py). Counts and timestamps only; the per-check report
 #   (ClusterScanReport) isn't readable.
@@ -25,6 +27,9 @@ rules:
     verbs: [list]
   - apiGroups: [metrics.k8s.io]
     resources: [pods]
+    verbs: [list]
+  - apiGroups: [cert-manager.io]
+    resources: [certificates]
     verbs: [list]
   - apiGroups: [compliance.cattle.io]
     resources: [clusterscans]
