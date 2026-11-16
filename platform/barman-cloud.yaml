@@ -1,0 +1,46 @@
+# CNPG's Barman Cloud plugin: continuous WAL archiving and base backups of every Meru Postgres into an S3 store
+# (Meru/garage), so a database can be restored to any point in time, not only to last night's pg_dumpall (which stays).
+# The plugin, not the Cluster's in-tree barmanObjectStore: CNPG deprecated the in-tree one and removes it in a later
+# minor. Installed next to the operator in cnpg-system (the operator finds plugins in its own namespace); it brings the
+# ObjectStore CRD, and its own client/server certificates from cert-manager. Each database opts in from its own repo:
+# an ObjectStore, the plugin in the Cluster's spec.plugins, a ScheduledBackup.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: barman-cloud
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2" # after CNPG and cert-manager (wave 1)
+spec:
+  project: platform
+  source:
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: plugin-barman-cloud
+    targetRevision: 0.9.0 # plugin v0.16.0, the latest (2026-11-09); needs CNPG 1.26+ (we run 1.30.1); no published advisories
+    helm:
+      releaseName: barman-cloud
+      valuesObject:
+        image:
+          tag: v0.16.0@sha256:6404a416718bd7aad943c67a25a7bb20d0558b43edfeab0bf167f013ca435882
+        # the container the plugin adds to each Postgres pod, which ships the WAL and the base backups
+        sidecarImage:
+          tag: v0.16.0@sha256:c669259e20ed1e11fad821f735c396c19d929985aa05b9544b13ecc8b5a386d0
+        podLabels:
+          app.kubernetes.io/part-of: meru
+          meru.clockmost.com/owner: platform
+        # No CPU limit (it throttles on an idle machine).
+        resources:
+          requests: { cpu: 10m, memory: 64Mi }
+          limits: { memory: 256Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true # the ObjectStore CRD is big, like CNPG's
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

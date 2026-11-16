@@ -29,7 +29,7 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
 
 - `platform/<part>.yaml` - the platform's parts, one Argo CD Application each, all in the `platform` fence. An
   explicit list, never discovered: each part installs cluster-wide objects, so adding one is a reviewed change
-  here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence: CNPG, [Zot](https://git.clockmost.com/Meru/zot), Falco, Reloader (restarts a workload when
+  here. `scripts/check.sh` fails any Application here that isn't in the `platform` fence: CNPG and its Barman Cloud plugin (Postgres WAL archive + base backups), [Zot](https://git.clockmost.com/Meru/zot), Falco, Reloader (restarts a workload when
   its Secret changes), [Temporal](https://git.clockmost.com/Meru/temporal) and its database. Upstream charts come straight from their
   publishers; everything of ours from a `Meru/` repo.
 

@@ -16,6 +16,8 @@
     - { group: rbac.authorization.k8s.io, kind: RoleBinding }
     - { group: postgresql.cnpg.io, kind: Cluster }
     - { group: postgresql.cnpg.io, kind: Database }
+    - { group: postgresql.cnpg.io, kind: ScheduledBackup } # the weekly base backup (platform/barman-cloud.yaml)
+    - { group: barmancloud.cnpg.io, kind: ObjectStore } # where a database's WAL + base backups go (Meru/garage)
     - { group: external-secrets.io, kind: SecretStore }
     - { group: external-secrets.io, kind: ExternalSecret }
     - { group: cert-manager.io, kind: Issuer }

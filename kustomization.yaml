@@ -70,6 +70,7 @@ resources:
   - rbac/zabbix-reads-cluster.yaml
   - rbac/zabbix-web-reads-db-login.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
+  - platform/barman-cloud.yaml
   - platform/cert-manager.yaml
   - platform/cnpg.yaml
   - platform/device-plugin.yaml
