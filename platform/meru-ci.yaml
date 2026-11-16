@@ -1,0 +1,82 @@
+# CI for the platform's own repos: Meru/meru (this repo) and Meru/nuwa (the charts) run their scripts/check.sh on every
+# pull request and on main, so a required `ci` check can gate their merges. Each gets a check-only Sindri runner
+# (sindri-build `build: false`) in <repo>-build: every job runs restricted, with no service account token, no
+# OpenBao login and no keys - nothing in it can sign, push or deploy. The runner's registration token comes from
+# Shikigami (clockmost-infra projects/openbao/admin/meru-check-runner.sh, once per repo); ESO reads it from
+# apps/meru/<repo>-build/eso/sindri-registration through the shared meru-eso role.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: meru-ci
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/sindri.git
+    targetRevision: sindri-build-0.8.0
+    path: charts/sindri-build
+    helm:
+      releaseName: meru-build
+      valuesObject:
+        app: meru
+        owner: platform
+        build: false
+        labels:
+          # python 3.15 + uv + git; check.sh's tools (helm, kubeconform, kustomize) are fetched by the job, pinned
+          sindri-check: ghcr.io/astral-sh/uv@sha256:f68dfb3eaf23a53afb5f74833bdacc0ce586d69f8063c48f9f3ebbe42e048e4a
+        network:
+          host:
+            ports: [443, 6443] # Caddy (Gitea's HTTPS), the Kubernetes API - no OpenBao: nothing here logs in
+        jobResources:
+          requests: { cpu: 250m, memory: 256Mi }
+          limits: { memory: 1Gi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: meru-build
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nuwa-ci
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/sindri.git
+    targetRevision: sindri-build-0.8.0
+    path: charts/sindri-build
+    helm:
+      releaseName: nuwa-build
+      valuesObject:
+        app: nuwa
+        owner: platform
+        build: false
+        labels:
+          sindri-check: ghcr.io/astral-sh/uv@sha256:f68dfb3eaf23a53afb5f74833bdacc0ce586d69f8063c48f9f3ebbe42e048e4a
+        network:
+          host:
+            ports: [443, 6443]
+        jobResources:
+          requests: { cpu: 250m, memory: 256Mi }
+          limits: { memory: 1Gi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nuwa-build
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

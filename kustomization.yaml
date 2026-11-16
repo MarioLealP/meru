@@ -82,6 +82,7 @@ resources:
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml
+  - platform/meru-ci.yaml
   - platform/rancher.yaml
   - platform/rancher-backup.yaml
   - platform/reloader.yaml
