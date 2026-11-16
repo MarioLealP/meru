@@ -20,7 +20,10 @@ owner merges - this repo decides what each part of the cluster may do, so nothin
   holds `owner`, `chart` (the [nuwa-app](https://git.clockmost.com/Meru/nuwa) release the app was tested with),
   `build` (true: also its build namespace and Sindri runner) and, optionally, `buildLabels` (extra runner labels and
   the image their jobs run in - e.g. `sindri-check` for tests; never `sindri` itself, the only label whose jobs get
-  the build keys). Argo never deletes what it generates: removing an app is a deliberate step.
+  the build keys), and `databaseClients` (other apps' namespaces that may reach this app's Postgres). Every
+  namespace also gets Meru's baseline ([meru-baseline](https://git.clockmost.com/Meru/nuwa), pinned here): network
+  policies closed by default, so only what the app's own policy names gets through. Argo never deletes what it
+  generates: removing an app is a deliberate step.
 - `appsets/meru-databases.yaml` - an app's database: a repo that also has `deploy/database/` gets a second
   Application, `app-<repo>-db`, in the same fence and namespace. Separate because the data must outlive every app
   deploy: it never prunes, and the database object itself should carry
