@@ -1,4 +1,4 @@
-# Anubis's direct checks (D118): before a verdict on something scanners stopped seeing, it looks again by another path
+# Anubis's direct checks: before a verdict on something scanners stopped seeing, it looks again by another path
 # than Heimdall's lists. A workload: `get` that exact object by name - no list, so it can only confirm what Thoth names.
 # An app: its Argo Application app-<name> (exists, Healthy). Read only.
 apiVersion: rbac.authorization.k8s.io/v1

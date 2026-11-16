@@ -1,4 +1,4 @@
-# Rancher: the cluster console (D130, workspace runbook clockmost-kubernetes.md) - logs, shells, restarts, a view of
+# Rancher: the cluster console (workspace runbook clockmost-kubernetes.md) - logs, shells, restarts, a view of
 # everything - at https://rancher.clockmost.com, LAN + VPN only (host Caddy terminates TLS, no ingress here).
 # Argo CD stays the only deployer: nobody edits live objects in Rancher, and its Fleet GitOps menu is off.
 #
@@ -13,9 +13,9 @@
 # login, kept in KeePass.
 #
 # Rancher runs as root and spawns its own parts (Fleet, its webhook, Turtles/CAPI) into namespaces it makes itself
-# (cattle-*, fleet-*, local, p-*), images by tag - outside the house rules on purpose (D130). Its webhook guards
-# Pod Security labels on namespaces; Argo's controller has `*` and passes. cattle-system is privileged (below). Removal = rancher-cleanup (D130 notes),
-# etcd snapshot first. Measured ~2.1 GB RAM (2026-11-15 load test).
+# (cattle-*, fleet-*, local, p-*), images by tag - outside the house rules on purpose. Its webhook guards
+# Pod Security labels on namespaces; Argo's controller has `*` and passes. cattle-system is privileged (below). Removal = rancher-cleanup,
+# etcd snapshot first. Uses ~2.1 GB RAM.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -42,7 +42,7 @@ spec:
         resources:
           requests: { cpu: 100m, memory: 1Gi }
           limits: { memory: 2Gi }
-        # Fleet itself can't be turned off; this only drops gitjob + the Continuous Delivery menu (D130).
+        # Fleet itself can't be turned off; this only drops gitjob + the Continuous Delivery menu.
         features: continuous-delivery=false
         postDelete:
           image:
@@ -187,7 +187,7 @@ spec:
               annotations: *cattle
             globalRoleName: user-base
             groupPrincipalName: genericoidc_group://clockmost-admins
-          # ... with this role on the local cluster (D130: read + restart + shell; Argo deploys, nobody edits live).
+          # ... with this role on the local cluster (read + restart + shell; Argo deploys, nobody edits live).
           - apiVersion: management.cattle.io/v3
             kind: RoleTemplate
             metadata:
@@ -251,7 +251,7 @@ spec:
             clusterName: local
             roleTemplateName: clockmost-operator
             groupPrincipalName: genericoidc_group://clockmost-admins
-          # Rancher projects = themes (Mario 2026-11-15: "just make part of the caas process, a theme field"). Rancher has
+          # Rancher projects = themes, a field of the app request. Rancher has
           # one level only, so a theme is a project and the app's namespaces sit in it side by side (immich, immich-build,
           # its environments). Which theme: the request's spec.theme, which Shikigami writes onto every one of the app's
           # namespaces as the annotation meru.clockmost.com/theme (default unsorted); an app namespace without one ->
@@ -374,11 +374,11 @@ spec:
     managedNamespaceMetadata:
       labels:
         # privileged: Rancher runs as root, and the system-upgrade-controller it installs here mounts host paths
-        # (/etc/ssl, /etc/pki). Under baseline that pod never started and Rancher retried the install every few
-        # seconds, leaving a failed pod each time - 61 of them filled the node's 200-pod limit (2026-11-15).
+        # (/etc/ssl, /etc/pki). Under baseline that pod never started and Rancher retries the install every few
+        # seconds, leaving a failed pod each time, until they fill the node's 200-pod limit.
         # Nothing new for Rancher: it already holds cluster-admin.
         pod-security.kubernetes.io/enforce: privileged
-        # OpenBao's shared meru-eso login admits only namespaces labelled part-of=meru (D71).
+        # OpenBao's shared meru-eso login admits only namespaces labelled part-of=meru.
         app.kubernetes.io/part-of: meru
         meru.clockmost.com/owner: platform
     retry:

@@ -1,7 +1,7 @@
 # The object kinds an app may deploy into its own two namespaces. Applied to every meru-* fence by
-# kustomization.yaml. No Secrets: an ExternalSecret names what it needs and ESO fills it from OpenBao (D66), through
+# kustomization.yaml. No Secrets: an ExternalSecret names what it needs and ESO fills it from OpenBao, through
 # the namespace's own SecretStore. A Certificate comes from the namespace's own Issuer, which OpenBao limits to
-# <ns>.svc names (D71). No cluster-wide kinds beyond the app's two Namespaces.
+# <ns>.svc names. No cluster-wide kinds beyond the app's two Namespaces.
 - op: add
   path: /spec/namespaceResourceWhitelist
   value:
@@ -11,7 +11,7 @@
     - { group: "", kind: ServiceAccount }
     - { group: apps, kind: Deployment }
     - { group: batch, kind: Job }
-    - { group: batch, kind: CronJob } # a scheduled app (nuwa-app job, D107): Charon's daily pass
+    - { group: batch, kind: CronJob } # a scheduled app (nuwa-app job): Charon's daily pass
     - { group: rbac.authorization.k8s.io, kind: Role }
     - { group: rbac.authorization.k8s.io, kind: RoleBinding }
     - { group: postgresql.cnpg.io, kind: Cluster }
@@ -22,8 +22,8 @@
     - { group: external-secrets.io, kind: ExternalSecret }
     - { group: cert-manager.io, kind: Issuer }
     - { group: cert-manager.io, kind: Certificate }
-    - { group: keda.sh, kind: ScaledObject } # scaling on the app's own backlog (D75)
+    - { group: keda.sh, kind: ScaledObject } # scaling on the app's own backlog
     - { group: keda.sh, kind: ScaledJob } # one-job build runners in <app>-build (sindri-build ephemeral)
-    # who may connect to the app (nuwa-app networkPolicy, D97). Only its own namespace's pods: a policy can open the
+    # who may connect to the app (nuwa-app networkPolicy). Only its own namespace's pods: a policy can open the
     # app wider than the chart's default, never reach into another namespace.
     - { group: networking.k8s.io, kind: NetworkPolicy }

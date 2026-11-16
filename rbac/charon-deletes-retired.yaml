@@ -1,4 +1,4 @@
-# Charon may delete a retired app's namespaces (D107, step 1): it lists namespaces, and once one's
+# Charon may delete a retired app's namespaces (step 1): it lists namespaces, and once one's
 # meru.clockmost.com/removed-at is past the app's retention, deletes it. Two keys: Shikigami writes the mark
 # (shikigami-marks-retired.yaml), Charon only reads it and checks the days - it can't edit a namespace, so it can't
 # mark one itself. delete on namespaces is cluster-wide in RBAC terms; the admission policy below narrows it: only a

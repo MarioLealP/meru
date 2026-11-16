@@ -98,4 +98,10 @@ Every app is laid out the same way, by layer, so anyone can find a thing without
 - **Shared code** lives in one Meru repo that holds actual code only, used as a git submodule pinned per app. Settings
   and project files stay in each app. It holds what is truly the same, and the third copy of the same logic moves
   there. *review*
+- **Comments say what the code does and why, today.** History - what it used to be, when it changed, which incident
+  led to it - goes in commit messages and runbooks. Decision and ticket IDs (`D71`, `cm-ayc6`, PR numbers) and dates
+  stay out of code and config, except an expiry the code depends on. A comment that names something gone is a bug.
+  *review*
+- **A mythology name comes with its role**: the README title (`# Charon - retired-app cleanup`) and the glossary in
+  Meru/meru's README. *review*
 - **Template drift:** app `ci.yaml` and `check.sh` match Meru/nuwa-python unless the difference says why. *review*

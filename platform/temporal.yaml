@@ -1,17 +1,17 @@
-# Temporal: the workflow engine behind Shikigami (workspace runbook clockmost-kubernetes.md D10). Temporal's own
+# Temporal: the workflow engine behind Shikigami. Temporal's own
 # chart in its normal layout (frontend, history, matching, worker + the web UI), one replica each, on the CNPG
 # database from temporal-db.yaml (wave 2). Admin tools off; the schema job (a Helm hook = an Argo PreSync hook)
 # creates/updates the tables on every sync.
-# Front door (D70): mutual TLS + Authentik tokens. Every certificate comes from OpenBao's pki_meru through
-# cert-manager (D71) - the frontend only accepts clients holding one; the services talk to each other over TLS too
+# Front door: mutual TLS + Authentik tokens. Every certificate comes from OpenBao's pki_meru through
+# cert-manager - the frontend only accepts clients holding one; the services talk to each other over TLS too
 # (internode). On top, every call needs a token from Authentik's `temporal-oidc` provider (client_id temporal):
 # its `temporal_permissions` claim (`<namespace>:<role>`, from temporal-* groups) decides what the caller may do.
 # Temporal's own parts (worker service, namespace job) use the internal-frontend instead: internode mTLS, no token.
-# So internode trusts its own CA, not pki_meru (D74): any Meru namespace can get a pki_meru cert for its own name,
+# So internode trusts its own CA, not pki_meru: any Meru namespace can get a pki_meru cert for its own name,
 # and with it would reach the internal-frontend - admin, no token - and history/matching directly.
-# The web UI logs Mario in with that provider and passes his token on (D73, a WP-62 exception until 2027-04-30);
+# The web UI logs Mario in with that provider and passes his token on (a WP-62 exception until 2027-04-30);
 # its client secret comes from OpenBao through ESO. Renewals: the server re-reads its files (refreshInterval);
-# the UI is rolled by Reloader (platform/reloader.yaml, D72), for certificates and the secret alike.
+# the UI is rolled by Reloader (platform/reloader.yaml), for certificates and the secret alike.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -110,7 +110,7 @@ spec:
               target: { name: temporal-ui-oidc, creationPolicy: Owner }
               dataFrom:
                 - extract: { key: meru/temporal/eso/temporal-ui-oidc }
-          # Internode's own CA (D74): its key lives only in this namespace (temporal-internode-ca, encrypted at rest),
+          # Internode's own CA: its key lives only in this namespace (temporal-internode-ca, encrypted at rest),
           # cert-manager renews it. 10 years; when it does renew, every server must restart within the hour (they
           # re-read files hourly, and old and new would not trust each other meanwhile).
           - |
@@ -204,13 +204,13 @@ spec:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 512Mi }
           # The server re-reads its certificate files (refreshInterval below), so a renewal needs no restart:
-          # Reloader skips these (D72). The UI can't, so it isn't annotated.
+          # Reloader skips these. The UI can't, so it isn't annotated.
           deploymentAnnotations:
             meru.clockmost.com/reloads-secrets: "true"
             reloader.stakater.com/auto: "false"
           # The frontend fetches Authentik's signing keys once at start and then only every refreshInterval - a
-          # failed first fetch isn't retried sooner, and an unknown key ID doesn't trigger one. After the 2026-10-31
-          # boot it started before Caddy listened and refused every token for an hour. So the frontend waits until
+          # failed first fetch isn't retried sooner, and an unknown key ID doesn't trigger one. Started before Caddy listens
+          # (at boot), it would refuse every token until the next refresh. So the frontend waits until
           # the keys answer (backing off to a minute). The chart gives every server service these init containers;
           # history, matching and the worker never call Authentik, so for them it's a no-op.
           additionalInitContainers:
@@ -295,7 +295,7 @@ spec:
               namespace:
                 - name: meru # Shikigami's workflows
                   retention: 30d
-                - name: heimdall # Heimdall's scans, every 5 min - their own room, short history (D103)
+                - name: heimdall # Heimdall's scans, every 5 min - their own room, short history
                   retention: 3d
           frontend: { containerSecurityContext: &container { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } } }
           history: { containerSecurityContext: *container }
@@ -326,7 +326,7 @@ spec:
             secretName: temporal-web-tls
             serverName: temporal-frontend.temporal.svc
             enableHostVerification: true
-          # Mario logs in through Authentik (D73); the forward-auth gate in Caddy stays in front. The access token
+          # Mario logs in through Authentik; the forward-auth gate in Caddy stays in front. The access token
           # (10 min) is renewed from the refresh token in an HttpOnly cookie, for up to 12 h.
           additionalEnv:
             - { name: TEMPORAL_AUTH_ENABLED, value: "true" }

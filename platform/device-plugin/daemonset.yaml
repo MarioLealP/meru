@@ -1,5 +1,5 @@
 # squat/generic-device-plugin (https://github.com/squat/generic-device-plugin; Red Hat ships it in MicroShift 4.20).
-# No versioned releases: the image is the commit tag f7c3291 (2026-10-26, = latest then) pinned by digest; the
+# No versioned releases: the image is the commit tag f7c3291 pinned by digest; the
 # security settings follow upstream's own hardened chart (generic-device-plugin-0.2.0: drop ALL, read-only root).
 # Root is needed for the socket in /var/lib/kubelet/device-plugins (root-owned); /dev is mounted read-only - it only
 # lists device nodes and follows symlinks.
@@ -41,7 +41,7 @@ spec:
         seccompProfile:
           type: RuntimeDefault
         # SELinux (Bahamut enforces): the default container_t may not connect to the kubelet's socket (AVC denied
-        # connectto ... tcontext container_runtime_t, 2026-11-13). container-selinux ships a type for exactly this
+        # connectto ... tcontext container_runtime_t). container-selinux ships a type for exactly this
         # job - container_device_plugin_t: the kubelet socket + device nodes, far narrower than spc_t.
         seLinuxOptions:
           type: container_device_plugin_t
@@ -60,7 +60,7 @@ spec:
                       mountPath: /dev/ender
                       permissions: rw
           # The kubelet's default /dev/termination-log can't be created inside the read-only host /dev
-          # (runc: "make mountpoint /dev/termination-log: read-only file system", 2026-11-13) - keep /dev read-only,
+          # (runc: "make mountpoint /dev/termination-log: read-only file system") - keep /dev read-only,
           # move the message file out of it.
           terminationMessagePath: /termination-log
           ports:

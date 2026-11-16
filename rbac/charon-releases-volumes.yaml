@@ -1,4 +1,4 @@
-# Charon may let a retired app's volumes go (D110): it lists PersistentVolumes and sets a Released one to Delete, and the
+# Charon may let a retired app's volumes go: it lists PersistentVolumes and sets a Released one to Delete, and the
 # provisioner removes the folder and the PV. Charon never touches a disk. patch on PVs is cluster-wide in RBAC terms; the
 # admission policy below narrows it: Retain to Delete on a Released PV, and nothing else on it changes. A volume in use
 # is Bound, so it can't be flipped. CEL has no clock, so the retention stays in Charon's code.

@@ -1,4 +1,4 @@
-# KEDA: scales Shikigami's workers on its own queue backlog (D75) - the generic metrics-api trigger polls
+# KEDA: scales Shikigami's workers on its own queue backlog - the generic metrics-api trigger polls
 # Shikigami's `GET /backlog`, so KEDA holds no Temporal certificate or token. It drives a standard HPA; it doesn't
 # scale anything by itself. 2.21.0: fixes GHSA-637c-6jxx-4rwm (critical - a namespace admin could make KEDA send
 # its token to an outside URL). Its reach is cut down from the chart's defaults:
@@ -19,7 +19,7 @@ spec:
   source:
     repoURL: https://kedacore.github.io/charts
     chart: keda
-    targetRevision: 2.21.0 # latest (2026-09-23)
+    targetRevision: 2.21.0
     helm:
       releaseName: keda
       valuesObject:
@@ -37,7 +37,7 @@ spec:
         rbac:
           enabledCustomScaledRefKinds: false
         # The chart sets app.kubernetes.io/part-of: keda-operator itself. The namespace is not part-of: meru on
-        # purpose - that label opens OpenBao's shared Meru logins (D71).
+        # purpose - that label opens OpenBao's shared Meru logins.
         podLabels:
           keda: &labels
             meru.clockmost.com/owner: platform

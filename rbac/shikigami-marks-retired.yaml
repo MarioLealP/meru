@@ -1,6 +1,6 @@
 # Shikigami may mark a retired app's namespaces (Charon step 1): its retire pass copies the request's removedAt
 # (stamped by Xolotl) onto `<app>` and `<app>-build` as the annotation meru.clockmost.com/removed-at, and a restore
-# (D106) takes it off again. Charon may delete only namespaces that carry it - so a namespace needs both keys,
+# takes it off again. Charon may delete only namespaces that carry it - so a namespace needs both keys,
 # Shikigami's mark and Charon's 30-day check, before it goes. It also writes the request's theme
 # (meru.clockmost.com/theme) onto the app's namespaces every pass - Rancher's sorter files them into that project
 # (platform/rancher.yaml). get + patch on namespaces is broad in RBAC terms; the admission policy below narrows it:
