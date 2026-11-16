@@ -85,9 +85,23 @@ spec:
         - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
           targetRevision: {{ .branch | quote }}
           ref: app
+        # Meru's baseline for the namespace (Meru/nuwa charts/meru-baseline): closed-by-default network policies,
+        # pinned here by the platform - the app's repo can't change or turn them off.
+        - repoURL: https://git.clockmost.com/Meru/nuwa.git
+          targetRevision: meru-baseline-0.1.0
+          path: charts/meru-baseline
+          helm:
+            releaseName: {{ printf "%s-baseline" .repository | quote }}
+            {{- if hasKey . "databaseClients" }}
+            valuesObject:
+              databaseClients:
+              {{- range .databaseClients }}
+                - {{ . | quote }}
+              {{- end }}
+            {{- end }}
       {{- if .build }}
         - repoURL: https://git.clockmost.com/Meru/sindri.git
-          targetRevision: sindri-build-0.5.0
+          targetRevision: sindri-build-0.6.0
           path: charts/sindri-build
           helm:
             releaseName: {{ printf "%s-build" .repository | quote }}

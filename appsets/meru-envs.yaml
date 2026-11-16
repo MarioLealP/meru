@@ -77,6 +77,12 @@ spec:
         - repoURL: {{ printf "https://git.clockmost.com/Meru/%s.git" .repository | quote }}
           targetRevision: {{ .branch | quote }}
           ref: app
+        # Meru's baseline for the environment's namespace, as for the app's own (meru-apps.yaml).
+        - repoURL: https://git.clockmost.com/Meru/nuwa.git
+          targetRevision: meru-baseline-0.1.0
+          path: charts/meru-baseline
+          helm:
+            releaseName: {{ printf "%s-%s-baseline" .repository (index .path.segments 2) | quote }}
 ---
 # An environment's database: a marker with database: "true" gets envdb-<repo>-<env> from
 # deploy/envs/<env>/database/, into the environment's namespace - as meru-databases.yaml does for the app itself: its own
