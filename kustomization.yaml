@@ -53,6 +53,7 @@ resources:
   - projects/authentik.yaml
   - projects/agents.yaml
   - projects/garage.yaml
+  - projects/meru-release.yaml
   - appsets/meru-apps.yaml
   - appsets/meru-databases.yaml
   - appsets/meru-envs.yaml

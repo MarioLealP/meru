@@ -1,0 +1,21 @@
+# Meru-release's fence: where its Application may read from and deploy to - its own repo plus the
+# Nüwa and Sindri charts, into exactly its two namespaces, which it may also create. Written by Shikigami (D82).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: meru-meru-release
+  namespace: argocd
+spec:
+  description: "Meru-release - Meru's release builder - builds, scans, signs and deploys each app's main"
+  sourceRepos:
+    - https://git.clockmost.com/Meru/meru-release.git
+    - https://git.clockmost.com/Meru/nuwa.git
+    - https://git.clockmost.com/Meru/sindri.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: meru-release
+    - server: https://kubernetes.default.svc
+      namespace: meru-release-build
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace, name: meru-release }
+    - { group: "", kind: Namespace, name: meru-release-build }
