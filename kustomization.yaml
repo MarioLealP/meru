@@ -67,6 +67,7 @@ resources:
   - rbac/charon-reads-apps.yaml
   - rbac/charon-releases-volumes.yaml
   - rbac/charon-sweep-report.yaml
+  - rbac/meru-release-report.yaml
   - rbac/anubis-findings.yaml
   - rbac/anubis-checks.yaml
   - rbac/zabbix-reads-cluster.yaml

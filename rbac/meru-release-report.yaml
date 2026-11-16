@@ -1,0 +1,56 @@
+# meru-release's report: each pass writes, per app, what it did (up-to-date / wait / start / deploy / blocked / error)
+# into the ConfigMap meru-release in its own namespace, and Zabbix reads that one object - the Anubis/Charon pattern.
+# meru-release may create ConfigMaps only in its namespace (create can't be narrowed to a name) and change only that
+# one; Zabbix may read only that one.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: meru-release-writes-report
+  namespace: meru-release
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [meru-release]
+    verbs: [get, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: meru-release-writes-report
+  namespace: meru-release
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: meru-release-writes-report
+subjects:
+  - kind: ServiceAccount
+    name: meru-release
+    namespace: meru-release
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zabbix-reads-meru-release
+  namespace: meru-release
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [meru-release]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zabbix-reads-meru-release
+  namespace: meru-release
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: zabbix-reads-meru-release
+subjects:
+  - kind: ServiceAccount
+    name: zabbix
+    namespace: zabbix # Meru/zabbix's server, through its kubectl-proxy sidecar on its own pod token
