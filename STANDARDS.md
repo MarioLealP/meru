@@ -94,6 +94,15 @@ Every app is laid out the same way, by layer, so anyone can find a thing without
 - **`scripts/check.sh` runs every CI step**, and passes before a PR. *checked*
 - **Conventional Commits** for commits and PR titles. *review*
 - **Containers** run as a non-root user with a digest-pinned base. *checked by Pod Security (restricted)*
+- **Which user, how much writable** - three levels, the first that works:
+  1. uid 10001 with a read-only root filesystem (`/tmp` the only scratch). The default, and what our own images do.
+  2. An upstream image that can't run that way: its own non-root uid (`runAsUser`) plus only the folders it writes,
+     mounted as volumes; the rest stays read-only. Pod Security stays `restricted` (no root, no capabilities). The
+     request says which uid and folders and why, in a comment. No approval needed.
+  3. Root or added capabilities: a named exception, the platform owner's call each time, with the reason where it
+     applies.
+  A rebuilt image (FROM upstream, patched to run as 10001) only when level 2 doesn't work. *review; levels 1-2 checked
+  by Pod Security (restricted)*
 - **Before pinning a version**, check the real latest release and its advisories. *review*
 - **Shared code** lives in one Meru repo that holds actual code only, used as a git submodule pinned per app. Settings
   and project files stay in each app. It holds what is truly the same, and the third copy of the same logic moves
