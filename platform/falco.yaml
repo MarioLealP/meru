@@ -29,10 +29,10 @@ spec:
         collectors:
           containerEngine:
             engines:
-              docker: { enabled: true, sockets: [/var/run/docker.sock] } # the compose stacks
+              docker: { enabled: false } # no Docker on Bahamut: the host runs podman
               cri: { enabled: true, sockets: [/run/k3s/containerd/containerd.sock] } # k3s pods
               containerd: { enabled: false }
-              podman: { enabled: false }
+              podman: { enabled: true, sockets: [/run/podman/podman.sock] } # the host's quadlets (pihole, opencanary)
               lxc: { enabled: false }
               libvirt_lxc: { enabled: false }
               bpm: { enabled: false }
@@ -46,36 +46,9 @@ spec:
           volumes:
             - name: events
               hostPath: { path: /var/log/falco, type: DirectoryOrCreate }
-            - name: docker-run
-              hostPath: { path: /var/run, type: Directory }
           volumeMounts:
             - name: events
               mountPath: /var/log/falco
-        # Falco asks Docker for container names once, at start. At boot k3s is up before Docker answers, so Falco could come up
-        # blind to the compose stacks. Wait for Docker's _ping, at most 3 minutes, then
-        # start anyway so the k3s pods stay watched if Docker is gone.
-        extra:
-          initContainers:
-            - name: wait-for-docker
-              image: docker.io/falcosecurity/falco:0.45.1@sha256:69e957f91b3a6beb5c82e2afae33ec3e4479dab2d4421475d288d0cd113cedf6
-              command:
-                - sh
-                - -c
-                - >-
-                  i=0; until curl -sf --max-time 2 --unix-socket /host/var/run/docker.sock http://docker/_ping >/dev/null; do
-                  i=$((i+1)); [ "$i" -ge 90 ] && echo "docker not answering after 180s, starting without it" && exit 0; sleep 2;
-                  done; echo "docker answers"
-              # SELinux: a plain container_t may not write Docker's socket (container_var_run_t) or connect to dockerd
-              # (container_runtime_t); the falco container already runs as spc_t, so this adds nothing to the pod.
-              securityContext:
-                seLinuxOptions: { type: spc_t }
-              resources:
-                requests: { cpu: 10m, memory: 16Mi }
-                limits: { memory: 64Mi }
-              volumeMounts:
-                - name: docker-run
-                  mountPath: /host/var/run
-                  readOnly: true
         customRules:
           clockmost-rules.yaml: |-
             # Known, reviewed activity on Bahamut (cm-xfav, first week of events 2026-10-28..11-05). Each entry names the exact
