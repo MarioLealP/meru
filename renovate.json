@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits", ":dependencyDashboard"],
+  "timezone": "Europe/Lisbon",
+  "schedule": ["* 0-5 * * 0"],
+  "minimumReleaseAge": "7 days",
+  "labels": ["renovate"],
+  "argocd": { "managerFilePatterns": ["/^platform/[^/]+\\.yaml$/"] },
+  "kubernetes": { "managerFilePatterns": ["/^platform/[^/]+/[^/]+\\.yaml$/"] },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The sindri-build chart release every app's build namespace uses (appsets/meru-apps.yaml).",
+      "managerFilePatterns": ["/^appsets/[^/]+\\.yaml$/"],
+      "matchStrings": ["targetRevision: sindri-build-(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "Meru/sindri",
+      "datasourceTemplate": "gitea-tags",
+      "registryUrlTemplate": "https://git.clockmost.com",
+      "extractVersionTemplate": "^sindri-build-(?<version>\\d+\\.\\d+\\.\\d+)$",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Upstream platform charts: listed on the Dependency Dashboard only. Each part pins its images by tag@digest in valuesObject, which Renovate can't tie to the chart - bump chart and images together by hand.",
+      "matchManagers": ["argocd"],
+      "dependencyDashboardApproval": true,
+      "addLabels": ["platform-review"]
+    },
+    {
+      "description": "Our own sindri-build chart: a PR straight away (no release-age wait).",
+      "matchDepNames": ["Meru/sindri"],
+      "minimumReleaseAge": "0 days",
+      "groupName": "sindri-build chart"
+    },
+    {
+      "description": "Our own images are written by CI, never by Renovate.",
+      "matchPackageNames": ["zot.clockmost.com/meru/**"],
+      "enabled": false
+    }
+  ]
+}
