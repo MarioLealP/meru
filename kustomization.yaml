@@ -75,11 +75,13 @@ resources:
   - platform/barman-cloud.yaml
   - platform/cert-manager.yaml
   - platform/cnpg.yaml
+  - platform/compliance.yaml
   - platform/device-plugin.yaml
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml
   - platform/rancher.yaml
+  - platform/rancher-backup.yaml
   - platform/reloader.yaml
   - platform/temporal.yaml
   - platform/temporal-db.yaml

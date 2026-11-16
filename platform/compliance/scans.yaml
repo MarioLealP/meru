@@ -1,0 +1,24 @@
+# The cluster's compliance scans, both on k3s-cis-2.0-profile: the k3s CIS benchmark for Kubernetes 1.34+, the
+# compliance chart's default for k3s (it ships one profile per benchmark version, no permissive/hardened pair).
+# - meru-baseline: no schedule, runs once when it is created - the starting point.
+# - meru-weekly: Sundays 12:00 UTC (daytime: the server may be off at night), keeps the last 8 reports. Zabbix reads
+#   its summary (failed-check count) and alerts when it rises.
+# "warn" results (checks kube-bench can't decide, e.g. manual ones) don't count as failures.
+apiVersion: compliance.cattle.io/v1
+kind: ClusterScan
+metadata:
+  name: meru-baseline
+spec:
+  scanProfileName: k3s-cis-2.0-profile
+  scoreWarning: pass
+---
+apiVersion: compliance.cattle.io/v1
+kind: ClusterScan
+metadata:
+  name: meru-weekly
+spec:
+  scanProfileName: k3s-cis-2.0-profile
+  scoreWarning: pass
+  scheduledScanConfig:
+    cronSchedule: "0 12 * * 0"
+    retentionCount: 8

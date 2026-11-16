@@ -8,6 +8,9 @@
 # - list pod metrics (metrics.k8s.io, metrics-server): which pod is eating CPU (ops/zabbix/zbx38, cm-x4ti - Kyverno's
 #   background controller spun ~8 cores for hours on 2026-11-13 behind a load alert that named nothing). Usage numbers
 #   only.
+# - get the ClusterScan meru-weekly (platform/compliance/scans.yaml): its summary, the failed-check count of the last
+#   weekly compliance scan (ops/zabbix/zbx41-rancher-compliance.py). Counts and timestamps only; the per-check report
+#   (ClusterScanReport) isn't readable.
 # No Secrets, no logs, no watch, no writes. The two report ConfigMaps (Anubis, Charon) are their own Roles, in
 # rbac/anubis-findings.yaml and rbac/charon-sweep-report.yaml.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -24,6 +27,10 @@ rules:
   - apiGroups: [metrics.k8s.io]
     resources: [pods]
     verbs: [list]
+  - apiGroups: [compliance.cattle.io]
+    resources: [clusterscans]
+    resourceNames: [meru-weekly]
+    verbs: [get]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
