@@ -71,6 +71,7 @@ resources:
   - rbac/anubis-checks.yaml
   - rbac/zabbix-reads-cluster.yaml
   - rbac/zabbix-web-reads-db-login.yaml
+  - rbac/garage-backup-keys.yaml
   # The platform's parts - an explicit list, never discovered: each one has cluster-wide power.
   - platform/barman-cloud.yaml
   - platform/cert-manager.yaml
