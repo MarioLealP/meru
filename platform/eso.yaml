@@ -38,6 +38,8 @@ spec:
         resources:
           requests: { cpu: 20m, memory: 64Mi }
           limits: { memory: 256Mi }
+        extraEnv: # ~90% of the memory limit: the Go GC works harder before the kernel OOM-kills
+          - { name: GOMEMLIMIT, value: 230MiB }
         livenessProbe:
           enabled: true
         readinessProbe:
@@ -48,6 +50,8 @@ spec:
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { memory: 128Mi }
+          extraEnv:
+            - { name: GOMEMLIMIT, value: 115MiB }
           livenessProbe:
             enabled: true
         certController:
@@ -56,6 +60,8 @@ spec:
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { memory: 128Mi }
+          extraEnv:
+            - { name: GOMEMLIMIT, value: 115MiB }
           livenessProbe:
             enabled: true
   destination:

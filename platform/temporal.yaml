@@ -203,6 +203,9 @@ spec:
           resources:
             requests: { cpu: 25m, memory: 64Mi }
             limits: { memory: 512Mi }
+          # ~90% of the memory limit: the Go GC works harder before the kernel OOM-kills.
+          additionalEnv:
+            - { name: GOMEMLIMIT, value: 460MiB }
           # The server re-reads its certificate files (refreshInterval below), so a renewal needs no restart:
           # Reloader skips these. The UI can't, so it isn't annotated.
           deploymentAnnotations:
@@ -329,6 +332,7 @@ spec:
           # Mario logs in through Authentik; the forward-auth gate in Caddy stays in front. The access token
           # (10 min) is renewed from the refresh token in an HttpOnly cookie, for up to 12 h.
           additionalEnv:
+            - { name: GOMEMLIMIT, value: 115MiB } # ~90% of the memory limit (128Mi)
             - { name: TEMPORAL_AUTH_ENABLED, value: "true" }
             - { name: TEMPORAL_AUTH_REDIRECT_TO_PROVIDER, value: "true" }
             - { name: TEMPORAL_AUTH_PROVIDER_URL, value: https://auth.clockmost.com/application/o/temporal-oidc/ }
