@@ -1,0 +1,69 @@
+# Vertical Pod Autoscaler, recommender only (bead cm-oi8x): it watches how much CPU and memory pods really use (from
+# metrics-server) and writes a recommended request into the status of a VerticalPodAutoscaler object. That is all it
+# does: updateMode Off on every object, and the updater (which evicts pods) and the admission controller (which
+# rewrites requests at pod creation) are not installed. So it changes nothing in the cluster; Mario and the agents
+# read the numbers to judge the requests and limits, and to size Shikigami's classes. No Prometheus here, so the
+# history is the recommender's own checkpoints: give it a week or two before trusting a number, and a spike is
+# remembered for days (it recommends the 90th/95th percentile with a safety margin).
+# Targets: platform/vpa/ holds the objects for the platform's own controllers. App workloads are a later step: their
+# fence (projects/app-kinds.yaml) does not allow a VerticalPodAutoscaler yet, and nuwa-app would own the objects.
+# Chart: Fairwinds' vpa (the Kubernetes project's own chart is newer but this one pairs with 1.7.x). Image 1.7.3,
+# the latest patch of the chart's 1.7 line (1.8.1 is out; Renovate/a deliberate bump can take it, same CRD).
+# Cost: one pod, 64Mi/20m request. Falco/Kyverno: it only reads pods and metrics and writes VPA status.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpa
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3" # after the controllers it measures
+spec:
+  project: platform
+  sources:
+    - repoURL: https://charts.fairwinds.com/stable
+      chart: vpa
+      targetRevision: 5.2.0 # VPA CRDs (autoscaling.k8s.io/v1) come with the chart
+      helm:
+        releaseName: vpa
+        valuesObject:
+          podLabels:
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/owner: platform
+          recommender:
+            enabled: true
+            image:
+              tag: 1.7.3@sha256:3b207e6e719e8a88b96b5777afa6f6fb261e73669fa39f487c04560d85bf2e7d
+              pullPolicy: IfNotPresent
+            extraArgs:
+              v: "2" # the chart's 4 logs every pod every minute
+              pod-recommendation-min-cpu-millicores: 15
+              pod-recommendation-min-memory-mb: 32 # the chart's 100 would hide how small the small controllers really are
+            resources:
+              requests: { cpu: 20m, memory: 64Mi }
+              limits: { memory: 256Mi }
+          updater:
+            enabled: false # it would evict pods: never in recommendation-only mode
+          admissionController:
+            enabled: false # it would rewrite requests at pod creation: same
+    - repoURL: https://git.clockmost.com/Meru/meru.git
+      targetRevision: main
+      path: platform/vpa
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpa
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true # the VPA kind comes with the chart's CRD in the same sync
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
