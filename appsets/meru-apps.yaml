@@ -4,7 +4,9 @@
 # nuwa-app release it was tested with), build (true: also its build namespace + Sindri runner) - all required - and
 # optional buildLabels (extra runner labels -> the image their jobs run in, e.g. sindri-check for tests; never sindri
 # itself: only its jobs get the build keys) and buildLimits (a bigger build than the 4Gi / 1h every app gets: memory
-# 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA llama.cpp; the build slots still cap it at two jobs at once)
+# 4-16Gi, timeout 1-3h - for compiles like felt-llm's CUDA llama.cpp) and buildCost (what one CI job of the app costs against
+# the node's build budget, which replaced the two build slots: memory 512Mi default, disk 2Gi, cpu 1; a heavy build declares
+# more, e.g. felt-llm 4Gi / 20Gi / 4 - a declared disk is also enforced as an ephemeral-storage limit; pools 5Gi / 24Gi / 8 cores)
 # and workload (default true; false = a host binary from template nuwa/binary: only the build side renders, no nuwa-app
 # chart - nothing of it runs in the cluster, a host timer installs its signed image).
 # The app's database, if any, is meru-databases.yaml's. The app- prefix keeps a repo from taking over a platform
@@ -101,7 +103,7 @@ spec:
             {{- end }}
       {{- if .build }}
         - repoURL: https://git.clockmost.com/Meru/sindri.git
-          targetRevision: sindri-build-0.10.0
+          targetRevision: sindri-build-0.11.0
           path: charts/sindri-build
           helm:
             releaseName: {{ printf "%s-build" .repository | quote }}
@@ -128,5 +130,20 @@ spec:
               buildMemoryLimit: {{ $memory | quote }}
               runner:
                 timeout: {{ $timeout | quote }}
+            {{- end }}
+            {{- if hasKey . "buildCost" }}
+            {{- $cMemory := get .buildCost "memory" | default "512Mi" | toString }}
+            {{- $cDisk := get .buildCost "disk" | default "" | toString }}
+            {{- $cCpu := get .buildCost "cpu" | default "1" | toString }}
+            {{- if not (regexMatch "^[1-9][0-9]*(Mi|Gi)$" $cMemory) }}{{ fail "deploy/meru.yaml: buildCost.memory must look like 512Mi or 4Gi" }}{{ end }}
+            {{- if and $cDisk (not (regexMatch "^[1-9][0-9]*Gi$" $cDisk)) }}{{ fail "deploy/meru.yaml: buildCost.disk must look like 20Gi" }}{{ end }}
+            {{- if not (regexMatch "^[1-9][0-9]*m?$" $cCpu) }}{{ fail "deploy/meru.yaml: buildCost.cpu must look like 1, 4 or 500m" }}{{ end }}
+              buildCost:
+                memory: {{ $cMemory | quote }}
+                cpu: {{ $cCpu | quote }}
+              {{- if $cDisk }}
+                disk: {{ $cDisk | quote }}
+                enforceDisk: true
+              {{- end }}
             {{- end }}
       {{- end }}
