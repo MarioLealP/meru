@@ -110,11 +110,6 @@ spec:
             valuesObject:
               app: {{ .repository | quote }}
               owner: {{ .owner | quote }}
-            {{- if eq .repository "echo" }}
-              # one-job runners started by KEDA instead of an always-on runner; echo first, every app once it holds (cm-ue0j)
-              ephemeral:
-                enabled: true
-            {{- end }}
             {{- if hasKey . "buildLabels" }}
             {{- if hasKey .buildLabels "sindri" }}{{ fail "deploy/meru.yaml: buildLabels may not redefine sindri" }}{{ end }}
               labels:
