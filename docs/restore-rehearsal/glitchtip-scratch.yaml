@@ -1,0 +1,48 @@
+# Restore rehearsal (bead cm-1iqt): bring GlitchTip's Postgres back from Garage into a SCRATCH cluster, check the data, tear
+# it down. NOT in kustomization.yaml and not under any path Argo reads: nothing here deploys. Mario applies it by hand
+# (steps: workspace runbook meru-external-audit-2026-11.md, section "Restore rehearsal: glitchtip").
+#
+# Where: the glitchtip namespace itself, under another name (glitchtip-restore-test). A second namespace would need its own
+# Garage key (Garage's provisioner, a Role in rbac/garage-backup-keys.yaml, a Garage NetworkPolicy line) - three repos for a
+# throwaway test. Here the existing Secret backup-s3 and the existing ObjectStore `backups` are reused as they are.
+# The scratch cluster has NO plugins section of its own: it must not archive WAL into pg-glitchtip next to the real
+# cluster's (two writers on one serverName would corrupt the very archive being tested). It only reads.
+# Argo never sees it: no tracking label, and the app's Cluster is a different object. Delete it afterwards (teardown).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: glitchtip-restore-test
+  namespace: glitchtip
+spec:
+  instances: 1
+  # The same image as the real cluster (glitchtip/deploy/database/cluster.yaml): Kyverno's meru-signed lets it through by exact digest.
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.15-202610260820-minimal-trixie@sha256:fc189febbe8c683dcf7399b93d25af3ad7a4d74c061875db300c41f0ad85f77a
+  inheritedMetadata:
+    labels:
+      app.kubernetes.io/name: glitchtip-restore-test
+      app.kubernetes.io/part-of: meru
+      meru.clockmost.com/app: glitchtip
+      meru.clockmost.com/owner: mario
+  bootstrap:
+    recovery:
+      source: origin
+      # Latest state (base backup + all WAL archived). For a point in time, uncomment (UTC, after the first base backup finished):
+      # recoveryTarget:
+      #   targetTime: "2026-11-17 12:00:00+00"
+  externalClusters:
+    - name: origin
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: backups # glitchtip's ObjectStore (deploy/database/backup.yaml): pg-glitchtip bucket, Secret backup-s3
+          serverName: glitchtip-db # the archive's folder = the real cluster's name
+  storage:
+    storageClass: local
+    size: 5Gi # as the real one; delete the cluster and its PVC goes with it
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  postgresql:
+    parameters:
+      max_connections: "50"
+      shared_buffers: 64MB
