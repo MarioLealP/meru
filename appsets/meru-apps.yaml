@@ -101,7 +101,7 @@ spec:
             {{- end }}
       {{- if .build }}
         - repoURL: https://git.clockmost.com/Meru/sindri.git
-          targetRevision: sindri-build-0.6.0
+          targetRevision: sindri-build-0.7.0
           path: charts/sindri-build
           helm:
             releaseName: {{ printf "%s-build" .repository | quote }}
