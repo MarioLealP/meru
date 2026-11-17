@@ -44,6 +44,16 @@ spec:
           metricsAdapter: *labels
           webhooks: *labels
         # No CPU limits (they throttle on an idle machine); the chart sets 1 core, null removes it.
+        # ~90% of each memory limit: the Go GC works harder before the kernel OOM-kills.
+        operator:
+          env:
+            - { name: GOMEMLIMIT, value: 230MiB }
+        metricsServer:
+          env:
+            - { name: GOMEMLIMIT, value: 230MiB }
+        webhooks:
+          env:
+            - { name: GOMEMLIMIT, value: 115MiB }
         resources:
           operator:
             requests: { cpu: 10m, memory: 48Mi }

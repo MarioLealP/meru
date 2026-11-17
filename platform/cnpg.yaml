@@ -23,6 +23,8 @@ spec:
         resources:
           requests: { cpu: 50m, memory: 128Mi }
           limits: { memory: 512Mi }
+        additionalEnv: # ~90% of the memory limit: the Go GC works harder before the kernel OOM-kills
+          - { name: GOMEMLIMIT, value: 460MiB }
         monitoring:
           podMonitorEnabled: false # no Prometheus; Postgres health goes to Zabbix later
   destination:
