@@ -15,7 +15,7 @@ spec:
   project: platform
   source:
     repoURL: https://git.clockmost.com/Meru/sindri.git
-    targetRevision: sindri-build-0.9.0
+    targetRevision: sindri-build-0.10.0
     path: charts/sindri-build
     helm:
       releaseName: meru-build
@@ -54,7 +54,7 @@ spec:
   project: platform
   source:
     repoURL: https://git.clockmost.com/Meru/sindri.git
-    targetRevision: sindri-build-0.9.0
+    targetRevision: sindri-build-0.10.0
     path: charts/sindri-build
     helm:
       releaseName: nuwa-build
