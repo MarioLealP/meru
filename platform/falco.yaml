@@ -85,7 +85,8 @@ spec:
                 condition: replace
 
             # Controllers whose job is the API: Argo, CNPG, cert-manager, ESO, Sindri runners, CNPG instance managers,
-            # and the Meru apps whose job is the API with their pod token (kubernetesApi: Heimdall, Shikigami, Charon, Anubis).
+            # and the Meru apps whose job is the API with their pod token (kubernetesApi: Heimdall, Shikigami, Charon, Anubis),
+            # and Rancher's theme sorter CronJob (platform/rancher.yaml: container "sort", kubectl every 5 min).
             - macro: user_known_contact_k8s_api_server_activities
               condition: >
                 (k8s.ns.name in (argocd, cnpg-system, cert-manager, external-secrets))
@@ -95,6 +96,8 @@ spec:
                 or (k8s.ns.name = shikigami and container.image.repository = "zot.clockmost.com/meru/shikigami")
                 or (k8s.ns.name = charon and container.image.repository = "zot.clockmost.com/meru/charon")
                 or (k8s.ns.name = anubis and container.image.repository = "zot.clockmost.com/meru/anubis")
+                or (k8s.ns.name = cattle-system and container.image.repository = "docker.io/rancher/shell"
+                    and container.name = sort and proc.name = kubectl)
               override:
                 condition: replace
 
