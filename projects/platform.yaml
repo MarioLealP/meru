@@ -10,6 +10,7 @@ spec:
   sourceRepos:
     - https://git.clockmost.com/Meru/*
     - https://charts.external-secrets.io
+    - https://charts.fairwinds.com/stable # vpa (recommendation only)
     - https://charts.jetstack.io
     - https://charts.rancher.io # rancher-compliance, rancher-backup
     - https://cloudnative-pg.github.io/charts

@@ -1,0 +1,175 @@
+# Recommendation-only VPA objects for the platform's own controllers (the Application is platform/vpa.yaml).
+# updateMode Off: the recommender writes status.recommendation and nothing else - nothing evicts or resizes a pod,
+# and the Application installs no updater and no admission controller, so Off cannot be switched on by accident.
+# Read the numbers with: kubectl get vpa -A  /  kubectl describe vpa <name> -n <ns>  (ssh clockmost-agent-read k8s).
+# Targets that do not exist (yet) just show no recommendation.
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: cert-manager }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cert-manager-cainjector
+  namespace: cert-manager
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: cert-manager-cainjector }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cert-manager-webhook
+  namespace: cert-manager
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: cert-manager-webhook }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets
+  namespace: external-secrets
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: external-secrets }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets-webhook
+  namespace: external-secrets
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: external-secrets-webhook }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: external-secrets-cert-controller
+  namespace: external-secrets
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: external-secrets-cert-controller }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: cnpg-cloudnative-pg
+  namespace: cnpg-system
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: cnpg-cloudnative-pg }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: keda-operator
+  namespace: keda
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: keda-operator }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: keda-operator-metrics-apiserver
+  namespace: keda
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: keda-operator-metrics-apiserver }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: keda-admission-webhooks
+  namespace: keda
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: keda-admission-webhooks }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: reloader-reloader
+  namespace: reloader
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: reloader-reloader }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-frontend
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-frontend }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-internal-frontend
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-internal-frontend }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-history
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-history }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-matching
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-matching }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-worker
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-worker }
+  updatePolicy: { updateMode: "Off" }
+
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: temporal-web
+  namespace: temporal
+spec:
+  targetRef: { apiVersion: apps/v1, kind: Deployment, name: temporal-web }
+  updatePolicy: { updateMode: "Off" }
