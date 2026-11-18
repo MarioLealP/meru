@@ -1,0 +1,18 @@
+# Default deny for ingress to every pod in the namespace, then one opening: the metrics port (8080), from the
+# zabbix namespace only (the Zabbix server pod polls it for the 'Kubernetes state by HTTP' template). Egress is left
+# open: KSM must reach the API server, and its address is not a stable selector.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kube-state-metrics-ingress
+  namespace: kube-state-metrics
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: zabbix
+      ports:
+        - { protocol: TCP, port: 8080 }
