@@ -16,7 +16,7 @@ rules:
     verbs: [create]
   - apiGroups: [""]
     resources: [secrets]
-    resourceNames: [s3-authentik, s3-glitchtip, s3-immich, s3-nova-lemuria, s3-nova-lemuria-uat, s3-nova-lemuria-prod, s3-thoth, s3-zabbix, s3-temporal]
+    resourceNames: [s3-authentik, s3-glitchtip, s3-immich, s3-nova-lemuria, s3-nova-lemuria-uat, s3-nova-lemuria-prod, s3-thoth, s3-zabbix, s3-temporal, s3-tofu]
     verbs: [get, update]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -216,3 +216,24 @@ metadata:
 roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: temporal-reads-backup-key }
 subjects:
   - { kind: ServiceAccount, name: backup-key, namespace: temporal }
+---
+# tofu: the Tofu apply runner's state bucket key (bucket pg-tofu, platform-rework runbook), its own key and nothing else
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: tofu-reads-backup-key
+  namespace: garage
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [s3-tofu]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tofu-reads-backup-key
+  namespace: garage
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: tofu-reads-backup-key }
+subjects:
+  - { kind: ServiceAccount, name: backup-key, namespace: tofu }
