@@ -1,0 +1,20 @@
+# gitea-runner config (https://gitea.com/gitea/runner, v6.0.0). Host mode: the job's steps run inside this container
+# (no docker, no job pods), one at a time.
+log:
+  level: info
+runner:
+  file: /data/.runner # registration result; /data is an emptyDir, so a new pod registers afresh
+  capacity: 1 # one apply at a time: Garage has no state lock, this is the lock (platform-rework runbook)
+  timeout: 1h # a job's limit (Gitea's own is 3h)
+  shutdown_timeout: 10m # a pod stop waits this long for a running job (terminationGracePeriodSeconds is longer)
+  labels:
+    - "tofu-apply:host"
+cache:
+  enabled: false # no actions/cache; workflows use plain run: steps
+host:
+  workdir_parent: /data/work
+health_check:
+  enabled: false
+metrics:
+  enabled: true # /healthz for the liveness probe; localhost only
+  addr: "127.0.0.1:9101"

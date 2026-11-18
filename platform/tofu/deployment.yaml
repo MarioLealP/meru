@@ -1,0 +1,106 @@
+# The Tofu apply runner: a plain Gitea runner (docker.io/gitea/runner, formerly act_runner) in host mode, registered to
+# Meru/tofu only. Jobs run as processes inside this container; there is no Docker and no job pod. Everything a job needs
+# is in the image or arrives as a mounted Secret:
+#  - the runner image (Alpine 3.24: bash, git, busybox wget, tini; no Node, no curl) + the static `tofu` binary,
+#    copied by an init container from the official OpenTofu image into /tools (musl vs glibc does not matter: static Go).
+#  - secrets as files under /secrets/<name>/<key>; a workflow step reads them into its own environment, e.g.
+#    TF_ENCRYPTION and AWS_* from /secrets/state-key and /secrets/s3-tofu, the Gitea login from /secrets/gitea.
+# Strategy Recreate: two runners at once would be two possible concurrent applies.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tofu-runner
+  labels:
+    app.kubernetes.io/name: tofu-runner
+    app.kubernetes.io/part-of: meru
+    meru.clockmost.com/owner: platform
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tofu-runner
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tofu-runner
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+      annotations:
+        # Reloader would roll the pod when ESO refreshes a Secret - in the middle of an apply. The secrets are mounted
+        # as files (kept current by the kubelet) and a job reads them fresh; the registration token is only read at start.
+        reloader.stakater.com/auto: "false"
+    spec:
+      serviceAccountName: tofu-runner
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 660 # config's shutdown_timeout (10m) + a minute
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        - name: tofu
+          # OpenTofu 1.13.9, the official image's multi-arch index. Its /usr/local/bin/tofu is byte-identical to the
+          # release's linux_amd64 zip (sha256 9ce9173b...), a static Go binary.
+          image: ghcr.io/opentofu/opentofu:1.13.9@sha256:f5aef7f2632b490e3c289a239d7974497d0583f3df6bfa35e8eb31a367ee5ec0
+          imagePullPolicy: IfNotPresent
+          command: [/bin/cp, /usr/local/bin/tofu, /tools/tofu]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+          volumeMounts:
+            - { name: tools, mountPath: /tools }
+      containers:
+        - name: runner
+          # gitea/runner 6.0.0 (2026-11-11), the multi-arch index; the same repository the Sindri runners use.
+          image: docker.io/gitea/runner:6.0.0@sha256:f9a1f17484398b861c25a763b81febfb394b17b72e0522c25d8067d7b484f347
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: HOME, value: /data }
+            - { name: PATH, value: "/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" }
+            - { name: CONFIG_FILE, value: /etc/runner/config.yaml }
+            - { name: GITEA_INSTANCE_URL, value: "https://git.clockmost.com" }
+            - { name: GITEA_RUNNER_LABELS, value: "tofu-apply:host" }
+            - { name: GITEA_RUNNER_REGISTRATION_TOKEN_FILE, value: /secrets/registration/token }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          # No CPU limit (it throttles on an idle machine); a memory limit above tofu's footprint with its providers.
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          startupProbe:
+            exec: { command: [wget, -q, -O, /dev/null, "http://127.0.0.1:9101/healthz"] }
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec: { command: [wget, -q, -O, /dev/null, "http://127.0.0.1:9101/healthz"] }
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+            - { name: tools, mountPath: /tools, readOnly: true }
+            - { name: config, mountPath: /etc/runner, readOnly: true }
+            - { name: registration, mountPath: /secrets/registration, readOnly: true }
+            - { name: gitea, mountPath: /secrets/gitea, readOnly: true }
+            - { name: state-key, mountPath: /secrets/state-key, readOnly: true }
+            - { name: s3-tofu, mountPath: /secrets/s3-tofu, readOnly: true }
+      volumes:
+        - { name: data, emptyDir: { sizeLimit: 2Gi } } # .runner, job workspaces, the provider cache
+        - { name: tmp, emptyDir: { sizeLimit: 512Mi } }
+        - { name: tools, emptyDir: { sizeLimit: 256Mi } } # the tofu binary (114 MB)
+        - name: config
+          configMap: { name: tofu-runner-config }
+        - { name: registration, secret: { secretName: registration, defaultMode: 0440 } }
+        - { name: gitea, secret: { secretName: gitea, defaultMode: 0440 } }
+        - { name: state-key, secret: { secretName: state-key, defaultMode: 0440 } }
+        - { name: s3-tofu, secret: { secretName: s3-tofu, defaultMode: 0440 } }

@@ -1,0 +1,48 @@
+# Default deny both ways for the namespace's pods, then the runner's egress, nothing else. No ingress at all: the runner
+# dials out to Gitea; nothing connects to it (its metrics port listens on localhost only).
+#  - DNS: CoreDNS.
+#  - Bahamut 192.168.10.110:443: Caddy, the front door of Gitea (git.clockmost.com resolves to it through CoreDNS) and
+#    later of the other APIs Tofu manages. NOT 8204 (OpenBao): the pod has no route to OpenBao, on purpose.
+#  - namespace garage, 3900: the S3 API (the Service's 80 is DNATed to the pod's 3900 before the policy sees it) - state.
+#  - public addresses, 443 only: provider downloads (registry.opentofu.org, github.com release assets). The committed
+#    lock file pins every provider's hashes, so a changed download fails `tofu init`; the LAN, the cluster (10.42/16),
+#    the node and link-local stay out of reach.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tofu-runner
+  labels:
+    app.kubernetes.io/name: tofu-runner
+    app.kubernetes.io/part-of: meru
+    meru.clockmost.com/owner: platform
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    - to:
+        - ipBlock:
+            cidr: 192.168.10.110/32
+      ports:
+        - { protocol: TCP, port: 443 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: garage
+      ports:
+        - { protocol: TCP, port: 3900 }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16, 127.0.0.0/8]
+      ports:
+        - { protocol: TCP, port: 443 }

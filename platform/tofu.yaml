@@ -1,0 +1,36 @@
+# The Tofu apply runner (platform-rework runbook, Stage B): after Mario merges a PR in Meru/tofu, a Gitea Actions
+# job runs `tofu apply` with no human slip and no standing token. One plain gitea/runner pod in namespace `tofu`,
+# host mode (label tofu-apply), registered to that repo only, capacity 1 - not the shared build runners, which run
+# untrusted repo code; this one holds credentials. Plain manifests (platform/tofu/): no chart fits one pod with this
+# many Secrets. The pod does NOT log in to OpenBao: ESO makes every Secret it uses (gitea bot, state passphrase,
+# registration token, Garage key s3-tofu) and the NetworkPolicy gives it no route to OpenBao.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tofu
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3" # after ESO (1) and the Garage app
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/meru.git
+    targetRevision: main
+    path: platform/tofu
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tofu
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
