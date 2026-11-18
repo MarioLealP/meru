@@ -1,0 +1,92 @@
+# kube-state-metrics 2.20.0: turns the state of Kubernetes objects (Deployments, StatefulSets, PVCs, PVs, Jobs, ...)
+# into metrics at :8080/metrics. Zabbix's 'Kubernetes state by HTTP' template reads it (platform-rework phase 2);
+# nothing else does, no Prometheus here. Its reach is cut down from the chart's defaults:
+# - collectors: only the object kinds the template uses; the chart narrows its ClusterRole to match, so it holds no
+#   Secrets and no ConfigMaps (a list + watch of the listed kinds, read-only)
+# - ingress: port 8080 from the zabbix namespace only (platform/kube-state-metrics/networkpolicy.yaml)
+# - the telemetry port (8081) is still served by the binary (chart has no off switch) but the NetworkPolicy blocks it; no ServiceMonitor
+# One replica, no sharding: the cluster is small.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-state-metrics
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3" # after the controllers whose objects it reports on
+spec:
+  project: platform
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-state-metrics
+      targetRevision: 9.0.1 # kube-state-metrics v2.20.0
+      helm:
+        releaseName: kube-state-metrics
+        valuesObject:
+          image:
+            registry: registry.k8s.io
+            repository: kube-state-metrics/kube-state-metrics
+            tag: v2.20.0
+            sha: sha256:42cfe3723a5f058171c627537fb57a3ea0f26e4380fa18555a95cb1a1b4cfc5b # the multi-arch index
+            pullPolicy: IfNotPresent
+          replicas: 1
+          collectors:
+            - namespaces
+            - nodes
+            - pods
+            - services
+            - endpoints
+            - deployments
+            - replicasets
+            - statefulsets
+            - daemonsets
+            - cronjobs
+            - jobs
+            - persistentvolumeclaims
+            - persistentvolumes
+            - poddisruptionbudgets
+          selfMonitor:
+            enabled: false # no telemetry Service port
+          prometheus:
+            monitor:
+              enabled: false
+          podLabels:
+            app.kubernetes.io/part-of: meru
+            meru.clockmost.com/owner: platform
+          # restricted pod security: non-root, read-only root, no capabilities, seccomp RuntimeDefault (the chart's
+          # defaults, written out so a chart bump can't loosen them silently).
+          securityContext:
+            enabled: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            seccompProfile: { type: RuntimeDefault }
+          containerSecurityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          automountServiceAccountToken: true # it reads the API with this token
+          # No CPU limit (it throttles on an idle machine).
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 256Mi }
+    - repoURL: https://git.clockmost.com/Meru/meru.git
+      targetRevision: main
+      path: platform/kube-state-metrics
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-state-metrics
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        app.kubernetes.io/part-of: meru
+        meru.clockmost.com/owner: platform
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }

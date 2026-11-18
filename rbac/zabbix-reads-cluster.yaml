@@ -12,6 +12,10 @@
 # - get the ClusterScan meru-weekly (platform/compliance/scans.yaml): its summary, the failed-check count of the last
 #   weekly compliance scan (ops/zabbix/zbx41-rancher-compliance.py). Counts and timestamps only; the per-check report
 #   (ClusterScanReport) isn't readable.
+# - get + list Endpoints (core): the 'Kubernetes state by HTTP' template reads /api/v1/endpoints for its endpoint
+#   discovery (platform-rework phase 2). Addresses and ports only.
+# - get + list Applications (argoproj.io): Argo CD's sync and health of each app, read from namespace argocd
+#   (status fields only; an Application holds no credentials - repo logins are separate Secrets).
 # No Secrets, no logs, no watch, no writes. The two report ConfigMaps (Anubis, Charon) are their own Roles, in
 # rbac/anubis-findings.yaml and rbac/charon-sweep-report.yaml.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -25,6 +29,12 @@ rules:
   - apiGroups: [""]
     resources: [pods]
     verbs: [list]
+  - apiGroups: [""]
+    resources: [endpoints]
+    verbs: [get, list]
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, list]
   - apiGroups: [metrics.k8s.io]
     resources: [pods]
     verbs: [list]

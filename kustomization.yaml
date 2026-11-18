@@ -85,6 +85,7 @@ resources:
   - platform/eso.yaml
   - platform/falco.yaml
   - platform/keda.yaml
+  - platform/kube-state-metrics.yaml
   - platform/meru-ci.yaml
   - platform/rancher.yaml
   - platform/rancher-backup.yaml
