@@ -56,8 +56,8 @@ Meru's parts carry mythology names; this is what each one does.
 | Nüwa | app templates: the `nuwa-app` Helm chart every app deploys with, plus the new-repo templates (`nuwa-python`, `nuwa-static`, `nuwa-upstream`, `nuwa-binary`) |
 | Sindri | app builds: the `sindri-build` chart - each app's build namespace and Gitea runner |
 | Shikigami | orchestrator: turns an approved app request into a running app (repo, fence, keys, deploy), and retires it |
-| Janus | request intake: takes app requests from the atlas and agents, hands approvals to Xolotl |
-| Xolotl | merger: checks and merges Shikigami's trust PRs and approved requests |
+| Janus | request intake: takes app requests from the atlas and agents and opens the PR on Meru/requests (Mario merges it in Gitea), links to it |
+| Xolotl | merger: rebuilds and compares Shikigami's trust PRs (it no longer merges or approves requests) |
 | Thoth | CMDB: what exists, how it connects, how it got that way |
 | Heimdall | scanner: tells Thoth what really runs in the cluster |
 | Anubis | stuck-app reports: finds what is stuck in Thoth, reports it to Zabbix |
