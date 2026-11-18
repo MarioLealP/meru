@@ -144,7 +144,7 @@ spec:
           sindri-validate: zot.clockmost.com/meru/shikigami@sha256:d0abd4ae5a58d009e37f002cd3d25e45c24fcf3dac9915c4e2cd9d013b8a62a6
         network:
           host:
-            ports: [443]
+            ports: [443, 6443] # Caddy (Gitea's HTTPS), the Kubernetes API (the runner execs into its job pod) - no OpenBao
         jobResources:
           requests: { cpu: 100m, memory: 128Mi }
           limits: { memory: 512Mi }
