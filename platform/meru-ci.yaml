@@ -1,4 +1,4 @@
-# CI for the platform's own repos: Meru/meru (this repo), Meru/nuwa (the charts) and Meru/nuwa-base (the shared app files)
+# CI for the platform's own repos: Meru/meru (this repo), Meru/nuwa (the charts), Meru/nuwa-base (the shared app files) and Meru/requests (shikigami-validate)
 # run their scripts/check.sh on every pull request and on main, so a required `ci` check can gate their merges. Each gets a check-only Sindri runner
 # (sindri-build `build: false`) in <repo>-build: every job runs restricted, with no service account token, no
 # OpenBao login and no keys - nothing in it can sign, push or deploy. The runner's registration token comes from
@@ -111,6 +111,46 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: nuwa-base-build
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff: { duration: 30s, factor: 2, maxDuration: 10m }
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: requests-ci
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: platform
+  source:
+    repoURL: https://git.clockmost.com/Meru/sindri.git
+    targetRevision: sindri-build-0.11.0
+    path: charts/sindri-build
+    helm:
+      releaseName: requests-build
+      valuesObject:
+        app: requests
+        owner: platform
+        build: false
+        labels:
+          # Shikigami's own image (git + /app/.venv/bin/shikigami-validate, user 10001): the validator comes from the
+          # pinned image, never from the PR it checks.
+          sindri-validate: zot.clockmost.com/meru/shikigami@sha256:d0abd4ae5a58d009e37f002cd3d25e45c24fcf3dac9915c4e2cd9d013b8a62a6
+        network:
+          host:
+            ports: [443]
+        jobResources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { memory: 512Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: requests-build
   syncPolicy:
     automated:
       prune: true
