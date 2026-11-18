@@ -92,6 +92,7 @@ resources:
   - platform/reloader.yaml
   - platform/temporal.yaml
   - platform/temporal-db.yaml
+  - platform/tofu.yaml
   - platform/vpa.yaml
   - platform/zot.yaml
 patches:
